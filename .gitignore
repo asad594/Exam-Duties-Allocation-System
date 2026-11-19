@@ -1,0 +1,24 @@
+# Documents (kept locally, not in the repo)
+*.docx
+*.doc
+*.pdf
+*.pptx
+Prompt*.txt
+~$*
+
+# .NET build output
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+
+# Frontend dependencies and builds (for the frontend team)
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

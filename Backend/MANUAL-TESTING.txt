@@ -1,0 +1,693 @@
+=======================================================================
+            EDAS - EXAM DUTIES ALLOCATION SYSTEM
+            MANUAL API TESTING GUIDE  (using Postman Desktop)
+=======================================================================
+
+HOW TO USE THIS GUIDE
+- Do the sections IN ORDER, from Section 1 to Section 10.
+- Every test shows:  REQUEST, BODY (if any), EXPECTED STATUS,
+  EXPECTED OUTPUT. Compare what Postman shows with EXPECTED OUTPUT.
+- Put an X in the box [ ] when your result matches.
+- Values in < > change every time (tokens, times). Only check that
+  they are present.
+- All IDs in this guide are correct when you start from a FRESH
+  database (Section 1, Step 1.4). If an ID is different on your
+  screen, use the ID you see.
+
+
+=======================================================================
+SECTION 1 - PREPARATION (do once before testing)
+=======================================================================
+
+Step 1.1  Start Docker
+   Open Docker Desktop from the Start menu.
+   Wait until the bottom-left corner shows "Engine running".
+   NOTE: Only the container "edas-mysql" belongs to this project.
+         Do not stop or change any other container.
+
+Step 1.2  Open a terminal in the Backend folder
+   Folder: C:\Users\RB Tech\Desktop\Software Construntion project\Backend
+   (Right-click inside the folder -> "Open in Terminal", or Git Bash.)
+
+Step 1.3  Start the EDAS database
+   Type:      docker start edas-mysql
+   EXPECTED:  edas-mysql
+
+Step 1.4  Make the database fresh (recommended, gives the IDs below)
+   Type:      dotnet tool run dotnet-ef database drop -f --project Edas.Api
+   EXPECTED:  Successfully dropped database 'edas'.
+              (If it says the database does not exist, that is fine.)
+
+Step 1.5  Start the API
+   Type:      dotnet run --project Edas.Api --launch-profile http
+   EXPECTED:  ... Now listening on: http://localhost:5080
+   Keep this terminal open while testing. On first start the API
+   creates all tables and loads the sample data by itself.
+
+Step 1.6  Import the collection into Postman
+   Postman -> Import (top left) -> files ->
+   Backend\postman\EDAS.postman_collection.json -> Import.
+   EXPECTED:  Collection "EDAS - Exam Duties Allocation System" with
+              folders Auth, Staff, Rooms, Courses, Sessions, Slots,
+              Unavailabilities, Rosters, My Duties.
+   (If an older copy is already imported, delete it first.)
+
+Step 1.7  How to work in Postman
+   - Click a request in the left sidebar, then click the blue "Send".
+   - Status code is shown at the top right of the response
+     (e.g. "200 OK").
+   - To change the JSON you send: "Body" tab.
+   - To change an ID: edit the number at the end of the URL bar.
+   - To change filters: "Params" tab.
+   - Collection variables (baseUrl, accessToken, refreshToken,
+     rosterId): click the collection name -> "Variables" tab.
+
+
+SAMPLE DATA LOADED AUTOMATICALLY
+-----------------------------------------------------------------------
+Logins
+   Coordinator : coord@edas.test   password Coord@123
+   Staff       : ali, sara, bilal, hina, usman, zainab, omar, fatima,
+                 hamza, ayesha  (@edas.test)   password Staff@123
+
+Staff IDs                                  (MaxDuties)
+   1 Exam Coordinator (Coordinator)         0
+   2 Ali Raza                               4
+   3 Sara Ahmed                             4
+   4 Bilal Hussain                          3
+   5 Hina Malik                             1   <- can do only 1 duty
+   6 Usman Tariq                            4   <- away all of 2030-03-05
+   7 Zainab Ali                             3   <- away 2030-03-06 08-13
+   8 Omar Farooq                            4
+   9 Fatima Noor                            3
+  10 Hamza Iqbal                            4
+  11 Ayesha Siddiqui                        4
+
+Rooms:  1 Room 1,  2 Room 2,  3 Room 3,  4 Main Hall
+
+Exams (sessions) and slots (room + invigilators required)
+  Session  Course  Date        Time         Slot  Room       Required
+     1     CS101   2030-03-04  09:00-12:00    1   Room 1        2
+                                              2   Room 2        2
+     2     CS102   2030-03-04  11:00-13:00    3   Room 3        2
+     3     CS103   2030-03-04  14:00-16:00    4   Room 1        2
+     4     MA101   2030-03-05  09:00-12:00    5   Room 1        2
+                                              6   Room 2        2
+     5     MA102   2030-03-05  14:00-17:00    7   Room 1        2
+     6     PH101   2030-03-06  09:00-12:00    8   Main Hall    12
+     7     EN101   2030-03-07  09:00-11:00    9   Room 1        2
+                                             10   Room 2        1
+     8     EN102   2030-03-07  13:00-15:00   11   Room 3        2
+
+
+=======================================================================
+SECTION 2 - LOGIN AND TOKENS   (Postman folder: Auth)
+=======================================================================
+
+[ ] Test 2.1  Coordinator login
+    REQUEST:   Auth -> Login (coordinator)    POST /api/auth/login
+    BODY:      { "email": "coord@edas.test", "password": "Coord@123" }
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       {
+         "accessToken": "<long text starting with eyJ>",
+         "refreshToken": "<long random text>"
+       }
+    NOTE: Postman saves both tokens automatically. Every other
+          request now sends the access token.
+
+[ ] Test 2.2  Wrong password is rejected
+    REQUEST:   Auth -> Login (coordinator), change password to "wrong"
+    EXPECTED STATUS:  401 Unauthorized
+    EXPECTED OUTPUT:
+       { "title": "Invalid email or password.", "status": 401 }
+    AFTER: change the password back to Coord@123 and Send again (200).
+
+[ ] Test 2.3  Refresh gives a new pair of tokens
+    BEFORE: from the last login response copy the "refreshToken"
+            value (without quotes) into Notepad.
+    REQUEST:   Auth -> Refresh    POST /api/auth/refresh
+    BODY:      { "refreshToken": "{{refreshToken}}" }
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  new "accessToken" and new "refreshToken"
+                      (different from before).
+
+[ ] Test 2.4  A refresh token works only once
+    REQUEST:   Auth -> Refresh. In Body replace {{refreshToken}} with
+               the OLD token you copied in Test 2.3.
+    EXPECTED STATUS:  401 Unauthorized
+    EXPECTED OUTPUT:
+       { "title": "Invalid refresh token.", "status": 401 }
+    AFTER: put {{refreshToken}} back in the Body.
+
+[ ] Test 2.5  No token = not allowed
+    REQUEST:   Rooms -> List Rooms. "Authorization" tab -> "No Auth".
+    EXPECTED STATUS:  401 Unauthorized
+    EXPECTED OUTPUT:  (empty body)
+    AFTER: set Authorization back to "Inherit auth from parent".
+
+[ ] Test 2.6  Staff cannot use coordinator endpoints
+    REQUEST:   Auth -> Login (staff)   (ali@edas.test / Staff@123)
+    EXPECTED STATUS:  200 OK (tokens saved)
+    THEN:      Rooms -> List Rooms -> Send
+    EXPECTED STATUS:  403 Forbidden
+    EXPECTED OUTPUT:  (empty body)
+
+[ ] Test 2.7  Log in as coordinator again (needed for Sections 3-8)
+    REQUEST:   Auth -> Login (coordinator)
+    EXPECTED STATUS:  200 OK
+
+    REMEMBER: the access token is valid for 15 minutes. If you get an
+    unexpected 401 later, run Auth -> Refresh or log in again.
+
+
+=======================================================================
+SECTION 3 - STAFF   (Postman folder: Staff)
+=======================================================================
+
+[ ] Test 3.1  List all staff
+    REQUEST:   List Staff    GET /api/staff
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  11 people. First two:
+       [
+         { "id": 1, "name": "Exam Coordinator", "email": "coord@edas.test",
+           "role": "Coordinator", "maxDuties": 0 },
+         { "id": 2, "name": "Ali Raza", "email": "ali@edas.test",
+           "role": "Staff", "maxDuties": 4 },
+         ...
+       ]
+    CHECK: there is NO password or passwordHash field anywhere.
+
+[ ] Test 3.2  Get one staff member
+    REQUEST:   Get Staff    GET /api/staff/2
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       { "id": 2, "name": "Ali Raza", "email": "ali@edas.test",
+         "role": "Staff", "maxDuties": 4 }
+
+[ ] Test 3.3  Create a staff member
+    REQUEST:   Create Staff    POST /api/staff
+    BODY:      { "name": "New Staff", "email": "new@edas.test",
+                 "password": "Staff@123", "role": "Staff", "maxDuties": 3 }
+    EXPECTED STATUS:  201 Created
+    EXPECTED OUTPUT:
+       { "id": 12, "name": "New Staff", "email": "new@edas.test",
+         "role": "Staff", "maxDuties": 3 }
+
+[ ] Test 3.4  Update the staff member
+    REQUEST:   Update Staff    PUT /api/staff/12   (change 1 -> 12 in URL)
+    BODY:      { "name": "New Staff", "email": "new@edas.test",
+                 "role": "Staff", "maxDuties": 4 }
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  same as 3.3 but "maxDuties": 4
+    NOTE: no password in the body = the old password is kept.
+
+[ ] Test 3.5  Duplicate email is rejected
+    REQUEST:   Create Staff again with the SAME body as Test 3.3
+    EXPECTED STATUS:  409 Conflict
+    EXPECTED OUTPUT:
+       { "title": "The change conflicts with existing data (duplicate
+         value or record in use).", "status": 409 }
+
+[ ] Test 3.6  Invalid email is rejected
+    REQUEST:   Create Staff, change "email" to "not-an-email"
+    EXPECTED STATUS:  400 Bad Request
+    EXPECTED OUTPUT:  contains
+       "title": "One or more validation errors occurred."
+       "errors": { "Email": [ "The Email field is not a valid e-mail address." ] }
+
+[ ] Test 3.7  Missing password on create is rejected
+    REQUEST:   Create Staff, email "other@edas.test", remove the
+               "password" line
+    EXPECTED STATUS:  400 Bad Request
+    EXPECTED OUTPUT:  { "title": "Password is required.", "status": 400 }
+
+[ ] Test 3.8  Delete the staff member
+    REQUEST:   Delete Staff    DELETE /api/staff/12
+    EXPECTED STATUS:  204 No Content
+    EXPECTED OUTPUT:  (empty body)
+
+[ ] Test 3.9  Deleted record is gone
+    REQUEST:   Get Staff    GET /api/staff/12
+    EXPECTED STATUS:  404 Not Found
+    EXPECTED OUTPUT:  { "title": "Staff 12 was not found.", "status": 404 }
+
+
+=======================================================================
+SECTION 4 - ROOMS   (Postman folder: Rooms)
+=======================================================================
+
+[ ] Test 4.1  List rooms
+    REQUEST:   List Rooms    GET /api/rooms
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       [ { "id": 1, "name": "Room 1" }, { "id": 2, "name": "Room 2" },
+         { "id": 3, "name": "Room 3" }, { "id": 4, "name": "Main Hall" } ]
+
+[ ] Test 4.2  Create a room
+    REQUEST:   Create Rooms    POST /api/rooms
+    BODY:      { "name": "Room 9" }
+    EXPECTED STATUS:  201 Created
+    EXPECTED OUTPUT:  { "id": 5, "name": "Room 9" }
+
+[ ] Test 4.3  Update the room
+    REQUEST:   Update Rooms    PUT /api/rooms/5
+    BODY:      { "name": "Room 9B" }
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  { "id": 5, "name": "Room 9B" }
+
+[ ] Test 4.4  Duplicate room name
+    REQUEST:   Create Rooms with { "name": "Room 1" }
+    EXPECTED STATUS:  409 Conflict
+
+[ ] Test 4.5  Empty room name
+    REQUEST:   Create Rooms with { "name": "" }
+    EXPECTED STATUS:  400 Bad Request
+    EXPECTED OUTPUT:  "errors": { "Name": [ "The Name field is required." ] }
+
+[ ] Test 4.6  Delete the new room
+    REQUEST:   Delete Rooms    DELETE /api/rooms/5
+    EXPECTED STATUS:  204 No Content
+
+[ ] Test 4.7  A room in use cannot be deleted
+    REQUEST:   Delete Rooms    DELETE /api/rooms/1
+    EXPECTED STATUS:  409 Conflict   (Room 1 is used by exam slots)
+
+
+=======================================================================
+SECTION 5 - COURSES AND EXAM SESSIONS   (folders: Courses, Sessions)
+=======================================================================
+
+[ ] Test 5.1  List courses
+    REQUEST:   List Courses    GET /api/courses
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  8 courses, e.g.
+       { "id": 1, "code": "CS101", "title": "CS101 Examination" }
+
+[ ] Test 5.2  Create a course
+    REQUEST:   Create Courses    BODY { "code": "CS999", "title": "Sample" }
+    EXPECTED STATUS:  201 Created
+    EXPECTED OUTPUT:  { "id": 9, "code": "CS999", "title": "Sample" }
+
+[ ] Test 5.3  Update the course
+    REQUEST:   Update Courses    PUT /api/courses/9
+    BODY:      { "code": "CS999", "title": "Sample 2" }
+    EXPECTED STATUS:  200 OK   ("title": "Sample 2")
+
+[ ] Test 5.4  Duplicate course code
+    REQUEST:   Create Courses with "code": "CS101"
+    EXPECTED STATUS:  409 Conflict
+
+[ ] Test 5.5  Delete the new course
+    REQUEST:   Delete Courses    DELETE /api/courses/9
+    EXPECTED STATUS:  204 No Content
+
+[ ] Test 5.6  A course with exams cannot be deleted
+    REQUEST:   Delete Courses    DELETE /api/courses/1
+    EXPECTED STATUS:  409 Conflict
+
+[ ] Test 5.7  List exam sessions
+    REQUEST:   List Sessions    GET /api/sessions
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  8 sessions, first one:
+       { "id": 1, "courseId": 1, "date": "2030-03-04",
+         "startTime": "09:00:00", "endTime": "12:00:00" }
+
+[ ] Test 5.8  Create an exam session
+    REQUEST:   Create Sessions
+    BODY:      { "courseId": 1, "date": "2030-03-10",
+                 "startTime": "09:00:00", "endTime": "12:00:00" }
+    EXPECTED STATUS:  201 Created
+    EXPECTED OUTPUT:  { "id": 9, "courseId": 1, "date": "2030-03-10",
+                        "startTime": "09:00:00", "endTime": "12:00:00" }
+
+[ ] Test 5.9  Update the session
+    REQUEST:   Update Sessions    PUT /api/sessions/9  (endTime 11:00:00)
+    EXPECTED STATUS:  200 OK   ("endTime": "11:00:00")
+
+[ ] Test 5.10 End time before start time is rejected
+    REQUEST:   Create Sessions with "startTime": "12:00:00",
+               "endTime": "09:00:00"
+    EXPECTED STATUS:  400 Bad Request
+    EXPECTED OUTPUT:  errors contain "EndTime must be after StartTime."
+
+[ ] Test 5.11 Delete the session
+    REQUEST:   Delete Sessions    DELETE /api/sessions/9
+    EXPECTED STATUS:  204 No Content
+
+
+=======================================================================
+SECTION 6 - SLOTS AND UNAVAILABILITY  (folders: Slots, Unavailabilities)
+=======================================================================
+
+[ ] Test 6.1  Slots of one exam session
+    REQUEST:   List Slots    GET /api/slots?sessionId=1
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       [ { "id": 1, "examSessionId": 1, "roomId": 1, "required": 2 },
+         { "id": 2, "examSessionId": 1, "roomId": 2, "required": 2 } ]
+    THEN: untick "sessionId" in Params and Send -> 11 slots.
+
+[ ] Test 6.2  Add a room to a session
+    REQUEST:   Create Slots
+    BODY:      { "examSessionId": 1, "roomId": 3, "required": 1 }
+    EXPECTED STATUS:  201 Created
+    EXPECTED OUTPUT:  { "id": 12, "examSessionId": 1, "roomId": 3, "required": 1 }
+
+[ ] Test 6.3  Same room twice in one session is rejected
+    REQUEST:   Create Slots with "roomId": 1
+    EXPECTED STATUS:  409 Conflict
+
+[ ] Test 6.4  Required invigilators must be at least 1
+    REQUEST:   Create Slots with "required": 0
+    EXPECTED STATUS:  400 Bad Request
+    EXPECTED OUTPUT:  "errors": { "Required": [ "The field Required must
+                      be between 1 and 100." ] }
+
+[ ] Test 6.5  Update and delete the new slot
+    REQUEST:   Update Slots  PUT /api/slots/12  ("required": 2) -> 200 OK
+               Delete Slots  DELETE /api/slots/12              -> 204
+
+[ ] Test 6.6  Unavailability of one staff member
+    REQUEST:   List Unavailabilities    GET /api/unavailabilities?staffId=6
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       [ { "id": 1, "staffId": 6, "date": "2030-03-05",
+           "startTime": "00:00:00", "endTime": "23:59:59" } ]
+       (Usman is away the whole day.)
+
+[ ] Test 6.7  Create, update, delete an unavailability
+    Create Unavailabilities  BODY { "staffId": 2, "date": "2030-03-10",
+        "startTime": "00:00:00", "endTime": "23:59:59" }   -> 201 (id 3)
+    Update Unavailabilities  PUT /api/unavailabilities/3  -> 200
+    Delete Unavailabilities  DELETE /api/unavailabilities/3 -> 204
+
+
+=======================================================================
+SECTION 7 - AUTOMATIC DUTY ALLOCATION   (Postman folder: Rosters)
+=======================================================================
+
+[ ] Test 7.1  Generate the draft roster
+    REQUEST:   Generate draft    POST /api/rosters/generate
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       { "draftId": 1, "assignedCount": 27, "vacancyCount": 1,
+         "elapsedMs": <time in milliseconds, under 5000> }
+    NOTE: "rosterId" is saved as 1 automatically.
+    IMPORTANT: do NOT click Generate again until Section 10, because
+               a new generate gives new assignment IDs.
+
+[ ] Test 7.2  View the whole draft
+    REQUEST:   Roster view    GET /api/rosters/1   (leave Params empty)
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  27 rows like
+       { "assignmentId": 15, "staffId": 6, "staffName": "Usman Tariq",
+         "date": "2030-03-04", "startTime": "09:00:00",
+         "endTime": "12:00:00", "courseCode": "CS101", "room": "Room 1" }
+    Full expected list (assignmentId - date - time - course - room - staff):
+       15  03-04 09:00 CS101 Room 1     Usman Tariq
+       16  03-04 09:00 CS101 Room 1     Zainab Ali
+       17  03-04 09:00 CS101 Room 2     Fatima Noor
+       18  03-04 09:00 CS101 Room 2     Hamza Iqbal
+       20  03-04 11:00 CS102 Room 3     Ali Raza
+       19  03-04 11:00 CS102 Room 3     Ayesha Siddiqui
+       21  03-04 14:00 CS103 Room 1     Ayesha Siddiqui
+       22  03-04 14:00 CS103 Room 1     Sara Ahmed
+        1  03-05 09:00 MA101 Room 1     Ali Raza
+        2  03-05 09:00 MA101 Room 1     Sara Ahmed
+        3  03-05 09:00 MA101 Room 2     Bilal Hussain
+        4  03-05 09:00 MA101 Room 2     Hina Malik
+        6  03-05 14:00 MA102 Room 1     Omar Farooq
+        5  03-05 14:00 MA102 Room 1     Zainab Ali
+       11  03-06 09:00 PH101 Main Hall  Ali Raza
+       10  03-06 09:00 PH101 Main Hall  Ayesha Siddiqui
+       13  03-06 09:00 PH101 Main Hall  Bilal Hussain
+        8  03-06 09:00 PH101 Main Hall  Fatima Noor
+        9  03-06 09:00 PH101 Main Hall  Hamza Iqbal
+       14  03-06 09:00 PH101 Main Hall  Omar Farooq
+       12  03-06 09:00 PH101 Main Hall  Sara Ahmed
+        7  03-06 09:00 PH101 Main Hall  Usman Tariq
+       23  03-07 09:00 EN101 Room 1     Bilal Hussain
+       24  03-07 09:00 EN101 Room 1     Usman Tariq
+       25  03-07 09:00 EN101 Room 2     Zainab Ali
+       27  03-07 13:00 EN102 Room 3     Fatima Noor
+       26  03-07 13:00 EN102 Room 3     Omar Farooq
+
+[ ] Test 7.3  Business rules visible in the roster (read the rows above)
+    a) No overlapping duties: CS101 (09-12) and CS102 (11-13) on
+       03-04 have DIFFERENT people.
+    b) Unavailable staff: Usman has NO duty on 03-05.
+    c) Duty limit: Hina appears exactly ONCE (her max is 1).
+    d) Shortage visible: Main Hall needs 12 but only 8 are listed.
+
+[ ] Test 7.4  Filter by staff
+    REQUEST:   Roster view, Params staffId = 2
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  3 rows, all "Ali Raza" (CS102 03-04, MA101 03-05,
+                      PH101 03-06)
+
+[ ] Test 7.5  Filter by date
+    REQUEST:   Roster view, Params date = 2030-03-04 (clear staffId)
+    EXPECTED OUTPUT:  8 rows, all on 2030-03-04
+
+[ ] Test 7.6  Filter by room
+    REQUEST:   Roster view, Params roomId = 4 (clear date)
+    EXPECTED OUTPUT:  8 rows, all "Main Hall"
+
+[ ] Test 7.7  Workload of every staff member
+    REQUEST:   Workload    GET /api/rosters/1/workload
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  10 rows (sorted by name):
+       Ali Raza 3 duties 8 h      Ayesha Siddiqui 3 duties 7 h
+       Bilal Hussain 3 / 8 h      Fatima Noor 3 / 8 h
+       Hamza Iqbal 2 / 6 h        Hina Malik 1 / 3 h
+       Omar Farooq 3 / 8 h        Sara Ahmed 3 / 8 h
+       Usman Tariq 3 / 8 h        Zainab Ali 3 / 8 h
+       e.g. { "staffId": 2, "staffName": "Ali Raza", "duties": 3,
+              "totalHours": 8 }
+
+[ ] Test 7.8  Unfilled duties (vacancies) with reasons
+    REQUEST:   Vacancies    GET /api/rosters/1/vacancies
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       [ { "slotId": 8, "courseCode": "PH101", "room": "Main Hall",
+           "date": "2030-03-06", "startTime": "09:00:00",
+           "endTime": "12:00:00", "missing": 4,
+           "unavailableCount": 1, "busyCount": 0, "atLimitCount": 1 } ]
+       (Zainab is unavailable, Hina is at her limit.)
+
+[ ] Test 7.9  Audit trail is empty before any change
+    REQUEST:   Audit trail    GET /api/rosters/1/audit
+    EXPECTED OUTPUT:  []
+
+[ ] Test 7.10 Export to CSV
+    REQUEST:   Export CSV    GET /api/rosters/1/export
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT (first lines):
+       Date,Start,End,Course,Room,Staff
+       2030-03-04,09:00,12:00,"CS101","Room 1","Usman Tariq"
+       2030-03-04,09:00,12:00,"CS101","Room 1","Zainab Ali"
+    TIP: "Save response" -> "Save to a file" to open it in Excel.
+
+
+=======================================================================
+SECTION 8 - MANUAL REPLACEMENT ON THE DRAFT  (folder: Rosters)
+=======================================================================
+All tests use: Replace assignment    PUT /api/rosters/1/assignments/{id}
+Change {id} in the URL and "newStaffId" in the Body.
+
+[ ] Test 8.1  Overlapping duty is rejected
+    URL:  /api/rosters/1/assignments/20    (CS102 11-13, Ali)
+    BODY: { "newStaffId": 9 }              (Fatima is on CS101 09-12)
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:
+       { "reason": "The staff member already has an overlapping duty." }
+
+[ ] Test 8.2  Staff at maximum duties is rejected
+    URL:  /api/rosters/1/assignments/26    (EN102, Omar)
+    BODY: { "newStaffId": 5 }              (Hina already has 1 of 1)
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:
+       { "reason": "The staff member has reached their maximum number of duties." }
+
+[ ] Test 8.3  Unavailable staff is rejected
+    URL:  /api/rosters/1/assignments/6     (MA102 on 03-05, Omar)
+    BODY: { "newStaffId": 6 }              (Usman is away on 03-05)
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:
+       { "reason": "The staff member is unavailable at this time." }
+
+[ ] Test 8.4  Person already in the same slot is rejected
+    URL:  /api/rosters/1/assignments/26
+    BODY: { "newStaffId": 9 }              (Fatima is already in EN102)
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:
+       { "reason": "The staff member is already assigned to this slot." }
+
+[ ] Test 8.5  Coordinator cannot be given a duty
+    URL:  /api/rosters/1/assignments/26
+    BODY: { "newStaffId": 1 }
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:
+       { "reason": "The new staff member must be an existing user with role Staff." }
+
+[ ] Test 8.6  Unknown assignment
+    URL:  /api/rosters/1/assignments/999   BODY { "newStaffId": 10 }
+    EXPECTED STATUS:  404 Not Found
+    EXPECTED OUTPUT:
+       { "title": "Assignment 999 was not found in roster 1.", "status": 404 }
+
+[ ] Test 8.7  VALID replacement (draft is changed in place)
+    URL:  /api/rosters/1/assignments/27    (EN102, Fatima)
+    BODY: { "newStaffId": 10 }             (Hamza, free at that time)
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  { "rosterVersionId": 1, "versionNo": 1 }
+    CHECK: Roster view (staffId = 10) now shows Hamza on EN102,
+           with the same assignmentId 27.
+
+[ ] Test 8.8  The change is recorded in the audit trail
+    REQUEST:   Audit trail    GET /api/rosters/1/audit
+    EXPECTED OUTPUT:
+       [ { "id": 1, "action": "Replace", "actor": "Exam Coordinator",
+           "oldStaff": "Fatima Noor", "newStaff": "Hamza Iqbal",
+           "slotId": 11, "at": "<date and time, UTC>" } ]
+
+
+=======================================================================
+SECTION 9 - PUBLISH AND VERSION HISTORY   (folder: Rosters)
+=======================================================================
+
+[ ] Test 9.1  Publish the draft
+    REQUEST:   Publish    POST /api/rosters/1/publish
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:
+       { "rosterVersionId": 1, "versionNo": 1, "vacancyWarning": 1 }
+    (Publishing with a vacancy is allowed; 1 = number of vacancies.)
+
+[ ] Test 9.2  A published roster cannot be published again
+    REQUEST:   Publish    POST /api/rosters/1/publish
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:  { "reason": "Only a draft roster can be changed." }
+
+[ ] Test 9.3  Changing a published roster creates a NEW version
+    REQUEST:   Replace assignment    PUT /api/rosters/1/assignments/27
+    BODY:      { "newStaffId": 9 }     (Hamza back to Fatima)
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  { "rosterVersionId": 2, "versionNo": 2 }
+
+[ ] Test 9.4  Both versions exist
+    REQUEST:   List versions    GET /api/rosters
+    EXPECTED OUTPUT:
+       [ { "id": 1, "versionNo": 1, "status": "Published",
+           "createdAt": "<time>", "publishedAt": "<time>" },
+         { "id": 2, "versionNo": 2, "status": "Published",
+           "createdAt": "<time>", "publishedAt": "<time>" } ]
+
+[ ] Test 9.5  The old version was NOT changed
+    REQUEST:   Roster view    GET /api/rosters/1?staffId=10
+    EXPECTED OUTPUT:  3 rows for Hamza: CS101, PH101, EN102
+                      (version 1 still has Hamza on EN102)
+    THEN: collection Variables -> set rosterId = 2 -> Save, and
+          Roster view with staffId=9 -> Fatima has CS101, PH101, EN102.
+
+[ ] Test 9.6  Only the LATEST published version can be changed
+    REQUEST:   Replace assignment    PUT /api/rosters/1/assignments/27
+               (type 1 directly in the URL instead of {{rosterId}})
+    BODY:      { "newStaffId": 3 }
+    EXPECTED STATUS:  422
+    EXPECTED OUTPUT:
+       { "reason": "Only the latest published roster can be changed." }
+
+[ ] Test 9.7  Audit trail of version 2
+    REQUEST:   Audit trail    GET /api/rosters/2/audit
+    EXPECTED OUTPUT:  one "Replace" row:
+       "oldStaff": "Hamza Iqbal", "newStaff": "Fatima Noor", "slotId": 11
+
+[ ] Test 9.8  Unknown roster
+    REQUEST:   Workload    GET /api/rosters/999/workload
+    EXPECTED STATUS:  404 Not Found
+    EXPECTED OUTPUT:  { "title": "Roster 999 was not found.", "status": 404 }
+
+
+=======================================================================
+SECTION 10 - STAFF VIEW, ONE-DRAFT RULE AND LOGOUT
+=======================================================================
+
+[ ] Test 10.1 Staff login
+    REQUEST:   Auth -> Login (staff), Body email "fatima@edas.test",
+               password "Staff@123"
+    EXPECTED STATUS:  200 OK
+
+[ ] Test 10.2 Staff see only their own published duties
+    REQUEST:   My Duties -> My published duties    GET /api/my-duties
+    EXPECTED STATUS:  200 OK
+    EXPECTED OUTPUT:  3 rows, all "Fatima Noor":
+       2030-03-04 09:00-12:00 CS101 Room 2
+       2030-03-06 09:00-12:00 PH101 Main Hall
+       2030-03-07 13:00-15:00 EN102 Room 3
+
+[ ] Test 10.3 Staff cannot open coordinator pages
+    REQUEST:   Rosters -> List versions (still logged in as Fatima)
+    EXPECTED STATUS:  403 Forbidden
+
+[ ] Test 10.4 Only one draft can exist
+    REQUEST:   Auth -> Login (coordinator), then Rosters -> Generate draft
+    EXPECTED OUTPUT:  { "draftId": 3, "assignedCount": 27,
+                        "vacancyCount": 1, "elapsedMs": <number> }
+    THEN: Generate draft again
+    EXPECTED OUTPUT:  "draftId": 3 again (the same draft is reused).
+
+[ ] Test 10.5 Staff never see a draft
+    REQUEST:   Login as fatima@edas.test again, My published duties
+    EXPECTED OUTPUT:  the same 3 rows as Test 10.2 (draft 3 is hidden)
+
+[ ] Test 10.6 Logout
+    REQUEST:   Auth -> Logout    POST /api/auth/logout
+    EXPECTED STATUS:  204 No Content
+    THEN:      Auth -> Refresh
+    EXPECTED STATUS:  401 Unauthorized  ("Invalid refresh token.")
+
+
+=======================================================================
+SECTION 11 - AUTOMATIC CHECKS (optional)
+=======================================================================
+
+[ ] Test 11.1 Smoke test (87 checks), API must be running
+    In a SECOND terminal inside the Backend folder:
+       bash scripts/smoke.sh
+    EXPECTED LAST LINE:  ALL CHECKS PASSED
+
+[ ] Test 11.2 Unit tests
+    Stop the API first (Ctrl+C in its terminal), then:
+       dotnet test
+    EXPECTED:  Passed!  - Failed: 0, Passed: 14
+
+
+=======================================================================
+STATUS CODE MEANINGS
+=======================================================================
+200 OK            the request worked
+201 Created       a new record was created
+204 No Content    deleted / logged out (empty body)
+400 Bad Request   invalid input (missing field, bad email, end < start)
+401 Unauthorized  not logged in, wrong password, expired or used token
+403 Forbidden     logged in but not allowed (staff on coordinator API)
+404 Not Found     the id does not exist
+409 Conflict      duplicate value, or the record is still in use
+422 (rule)        a business rule rejected the change; read "reason"
+
+
+=======================================================================
+START AGAIN FROM A CLEAN STATE
+=======================================================================
+1. Stop the API: press Ctrl+C in its terminal.
+2. dotnet tool run dotnet-ef database drop -f --project Edas.Api
+3. dotnet run --project Edas.Api --launch-profile http
+4. In Postman: collection Variables -> rosterId = 1, then
+   Auth -> Login (coordinator).
+
+WHEN FINISHED
+- Ctrl+C in the API terminal.
+- Optional:  docker stop edas-mysql
+  (only this container - never stop the other project's containers)
+=======================================================================
