@@ -59,7 +59,7 @@ public sealed class AllocationService(AppDbContext db, RosterService rosters)
     private static int Count(List<(StaffInfo Staff, Block Block)> blocks, Block block) => blocks.Count(b => b.Block == block);
 
     private Task<List<StaffInfo>> LoadStaff() =>
-        db.Staff.AsNoTracking().Where(s => s.Role == Role.Staff).Select(s => new StaffInfo(s.Id, s.MaxDuties)).ToListAsync();
+        db.Staff.AsNoTracking().Where(s => s.Role == Role.Faculty).Select(s => new StaffInfo(s.Id, s.MaxDuties)).ToListAsync();
 
     private Task<List<SlotInfo>> LoadSlots() =>
         db.Slots.AsNoTracking()

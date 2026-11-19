@@ -17,7 +17,7 @@ namespace Edas.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -331,7 +331,7 @@ namespace Edas.Api.Migrations
                         {
                             t.HasCheckConstraint("CK_Staff_MaxDuties", "`MaxDuties` >= 0");
 
-                            t.HasCheckConstraint("CK_Staff_Role", "`Role` IN ('Coordinator','Staff')");
+                            t.HasCheckConstraint("CK_Staff_Role", "`Role` IN ('Admin','Faculty')");
                         });
                 });
 

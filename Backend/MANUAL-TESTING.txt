@@ -66,12 +66,12 @@ Step 1.7  How to work in Postman
 SAMPLE DATA LOADED AUTOMATICALLY
 -----------------------------------------------------------------------
 Logins
-   Coordinator : coord@edas.test   password Coord@123
-   Staff       : ali, sara, bilal, hina, usman, zainab, omar, fatima,
-                 hamza, ayesha  (@edas.test)   password Staff@123
+   Admin       : admin@edas.test   password Admin@123
+   Faculty     : ali, sara, bilal, hina, usman, zainab, omar, fatima,
+                 hamza, ayesha  (@edas.test)   password Faculty@123
 
 Staff IDs                                  (MaxDuties)
-   1 Exam Coordinator (Coordinator)         0
+   1 System Admin (Admin)         0
    2 Ali Raza                               4
    3 Sara Ahmed                             4
    4 Bilal Hussain                          3
@@ -104,9 +104,9 @@ Exams (sessions) and slots (room + invigilators required)
 SECTION 2 - LOGIN AND TOKENS   (Postman folder: Auth)
 =======================================================================
 
-[ ] Test 2.1  Coordinator login
-    REQUEST:   Auth -> Login (coordinator)    POST /api/auth/login
-    BODY:      { "email": "coord@edas.test", "password": "Coord@123" }
+[ ] Test 2.1  Admin login
+    REQUEST:   Auth -> Login (admin)    POST /api/auth/login
+    BODY:      { "email": "admin@edas.test", "password": "Admin@123" }
     EXPECTED STATUS:  200 OK
     EXPECTED OUTPUT:
        {
@@ -117,11 +117,11 @@ SECTION 2 - LOGIN AND TOKENS   (Postman folder: Auth)
           request now sends the access token.
 
 [ ] Test 2.2  Wrong password is rejected
-    REQUEST:   Auth -> Login (coordinator), change password to "wrong"
+    REQUEST:   Auth -> Login (admin), change password to "wrong"
     EXPECTED STATUS:  401 Unauthorized
     EXPECTED OUTPUT:
        { "title": "Invalid email or password.", "status": 401 }
-    AFTER: change the password back to Coord@123 and Send again (200).
+    AFTER: change the password back to Admin@123 and Send again (200).
 
 [ ] Test 2.3  Refresh gives a new pair of tokens
     BEFORE: from the last login response copy the "refreshToken"
@@ -146,15 +146,15 @@ SECTION 2 - LOGIN AND TOKENS   (Postman folder: Auth)
     EXPECTED OUTPUT:  (empty body)
     AFTER: set Authorization back to "Inherit auth from parent".
 
-[ ] Test 2.6  Staff cannot use coordinator endpoints
-    REQUEST:   Auth -> Login (staff)   (ali@edas.test / Staff@123)
+[ ] Test 2.6  Faculty cannot use admin endpoints
+    REQUEST:   Auth -> Login (faculty)   (ali@edas.test / Faculty@123)
     EXPECTED STATUS:  200 OK (tokens saved)
     THEN:      Rooms -> List Rooms -> Send
     EXPECTED STATUS:  403 Forbidden
     EXPECTED OUTPUT:  (empty body)
 
-[ ] Test 2.7  Log in as coordinator again (needed for Sections 3-8)
-    REQUEST:   Auth -> Login (coordinator)
+[ ] Test 2.7  Log in as admin again (needed for Sections 3-8)
+    REQUEST:   Auth -> Login (admin)
     EXPECTED STATUS:  200 OK
 
     REMEMBER: the access token is valid for 15 minutes. If you get an
@@ -170,10 +170,10 @@ SECTION 3 - STAFF   (Postman folder: Staff)
     EXPECTED STATUS:  200 OK
     EXPECTED OUTPUT:  11 people. First two:
        [
-         { "id": 1, "name": "Exam Coordinator", "email": "coord@edas.test",
-           "role": "Coordinator", "maxDuties": 0 },
+         { "id": 1, "name": "System Admin", "email": "admin@edas.test",
+           "role": "Admin", "maxDuties": 0 },
          { "id": 2, "name": "Ali Raza", "email": "ali@edas.test",
-           "role": "Staff", "maxDuties": 4 },
+           "role": "Faculty", "maxDuties": 4 },
          ...
        ]
     CHECK: there is NO password or passwordHash field anywhere.
@@ -183,21 +183,21 @@ SECTION 3 - STAFF   (Postman folder: Staff)
     EXPECTED STATUS:  200 OK
     EXPECTED OUTPUT:
        { "id": 2, "name": "Ali Raza", "email": "ali@edas.test",
-         "role": "Staff", "maxDuties": 4 }
+         "role": "Faculty", "maxDuties": 4 }
 
 [ ] Test 3.3  Create a staff member
     REQUEST:   Create Staff    POST /api/staff
     BODY:      { "name": "New Staff", "email": "new@edas.test",
-                 "password": "Staff@123", "role": "Staff", "maxDuties": 3 }
+                 "password": "Faculty@123", "role": "Faculty", "maxDuties": 3 }
     EXPECTED STATUS:  201 Created
     EXPECTED OUTPUT:
        { "id": 12, "name": "New Staff", "email": "new@edas.test",
-         "role": "Staff", "maxDuties": 3 }
+         "role": "Faculty", "maxDuties": 3 }
 
 [ ] Test 3.4  Update the staff member
     REQUEST:   Update Staff    PUT /api/staff/12   (change 1 -> 12 in URL)
     BODY:      { "name": "New Staff", "email": "new@edas.test",
-                 "role": "Staff", "maxDuties": 4 }
+                 "role": "Faculty", "maxDuties": 4 }
     EXPECTED STATUS:  200 OK
     EXPECTED OUTPUT:  same as 3.3 but "maxDuties": 4
     NOTE: no password in the body = the old password is kept.
@@ -524,12 +524,12 @@ Change {id} in the URL and "newStaffId" in the Body.
     EXPECTED OUTPUT:
        { "reason": "The staff member is already assigned to this slot." }
 
-[ ] Test 8.5  Coordinator cannot be given a duty
+[ ] Test 8.5  Admin cannot be given a duty
     URL:  /api/rosters/1/assignments/26
     BODY: { "newStaffId": 1 }
     EXPECTED STATUS:  422
     EXPECTED OUTPUT:
-       { "reason": "The new staff member must be an existing user with role Staff." }
+       { "reason": "The new staff member must be an existing user with role Faculty." }
 
 [ ] Test 8.6  Unknown assignment
     URL:  /api/rosters/1/assignments/999   BODY { "newStaffId": 10 }
@@ -548,7 +548,7 @@ Change {id} in the URL and "newStaffId" in the Body.
 [ ] Test 8.8  The change is recorded in the audit trail
     REQUEST:   Audit trail    GET /api/rosters/1/audit
     EXPECTED OUTPUT:
-       [ { "id": 1, "action": "Replace", "actor": "Exam Coordinator",
+       [ { "id": 1, "action": "Replace", "actor": "System Admin",
            "oldStaff": "Fatima Noor", "newStaff": "Hamza Iqbal",
            "slotId": 11, "at": "<date and time, UTC>" } ]
 
@@ -610,15 +610,15 @@ SECTION 9 - PUBLISH AND VERSION HISTORY   (folder: Rosters)
 
 
 =======================================================================
-SECTION 10 - STAFF VIEW, ONE-DRAFT RULE AND LOGOUT
+SECTION 10 - FACULTY VIEW, ONE-DRAFT RULE AND LOGOUT
 =======================================================================
 
-[ ] Test 10.1 Staff login
-    REQUEST:   Auth -> Login (staff), Body email "fatima@edas.test",
-               password "Staff@123"
+[ ] Test 10.1 Faculty login
+    REQUEST:   Auth -> Login (faculty), Body email "fatima@edas.test",
+               password "Faculty@123"
     EXPECTED STATUS:  200 OK
 
-[ ] Test 10.2 Staff see only their own published duties
+[ ] Test 10.2 Faculty see only their own published duties
     REQUEST:   My Duties -> My published duties    GET /api/my-duties
     EXPECTED STATUS:  200 OK
     EXPECTED OUTPUT:  3 rows, all "Fatima Noor":
@@ -626,18 +626,18 @@ SECTION 10 - STAFF VIEW, ONE-DRAFT RULE AND LOGOUT
        2030-03-06 09:00-12:00 PH101 Main Hall
        2030-03-07 13:00-15:00 EN102 Room 3
 
-[ ] Test 10.3 Staff cannot open coordinator pages
+[ ] Test 10.3 Faculty cannot open admin pages
     REQUEST:   Rosters -> List versions (still logged in as Fatima)
     EXPECTED STATUS:  403 Forbidden
 
 [ ] Test 10.4 Only one draft can exist
-    REQUEST:   Auth -> Login (coordinator), then Rosters -> Generate draft
+    REQUEST:   Auth -> Login (admin), then Rosters -> Generate draft
     EXPECTED OUTPUT:  { "draftId": 3, "assignedCount": 27,
                         "vacancyCount": 1, "elapsedMs": <number> }
     THEN: Generate draft again
     EXPECTED OUTPUT:  "draftId": 3 again (the same draft is reused).
 
-[ ] Test 10.5 Staff never see a draft
+[ ] Test 10.5 Faculty never see a draft
     REQUEST:   Login as fatima@edas.test again, My published duties
     EXPECTED OUTPUT:  the same 3 rows as Test 10.2 (draft 3 is hidden)
 
@@ -671,7 +671,7 @@ STATUS CODE MEANINGS
 204 No Content    deleted / logged out (empty body)
 400 Bad Request   invalid input (missing field, bad email, end < start)
 401 Unauthorized  not logged in, wrong password, expired or used token
-403 Forbidden     logged in but not allowed (staff on coordinator API)
+403 Forbidden     logged in but not allowed (staff on admin API)
 404 Not Found     the id does not exist
 409 Conflict      duplicate value, or the record is still in use
 422 (rule)        a business rule rejected the change; read "reason"
@@ -684,7 +684,7 @@ START AGAIN FROM A CLEAN STATE
 2. dotnet tool run dotnet-ef database drop -f --project Edas.Api
 3. dotnet run --project Edas.Api --launch-profile http
 4. In Postman: collection Variables -> rosterId = 1, then
-   Auth -> Login (coordinator).
+   Auth -> Login (admin).
 
 WHEN FINISHED
 - Ctrl+C in the API terminal.

@@ -2,7 +2,7 @@
 
 | Req | File -> method |
 |---|---|
-| FR-01 role login & permissions | `AuthService.Login`, `TokenService.CreateAccessToken`; `[Authorize(Roles="Coordinator")]` on `CrudController`, `RostersController` |
+| FR-01 role login & permissions | `AuthService.Login`, `TokenService.CreateAccessToken`; `[Authorize(Roles="Admin")]` on `CrudController`, `RostersController` |
 | FR-02 staff & availability | `StaffController`, `UnavailabilitiesController` -> `CrudService` + `StaffMap` / `UnavailabilityMap` |
 | FR-03 duty limits | `StaffMap.Update` (MaxDuties) -> `EligibilityService.Check` (AtLimit) |
 | FR-04 exam sessions | `SessionsController` -> `SessionMap` |
@@ -22,7 +22,7 @@
 | BR-06 same rules for replacement | `RosterService.Validate` calls `EligibilityService.Check` |
 
 **Allocation algorithm.** Load staff, slots and unavailabilities once. Sort slots by how many staff are eligible when nobody has a duty (fewest first), then date, start, id.
-For each slot, run `Check` for every Staff user against the running duties; keep those with `Block.None`.
+For each slot, run `Check` for every Faculty user against the running duties; keep those with `Block.None`.
 Rank them by total hours, then duty count, then staff id (deterministic), and take `Required` people.
 If too few, record a vacancy with the missing count and how many staff were blocked as Unavailable, Overlap or AtLimit.
 Rules are never broken to fill a slot; the draft, assignments and vacancies are saved in one transaction.
@@ -30,7 +30,7 @@ Rules are never broken to fill a slot; the draft, assignments and vacancies are 
 **How BR-06 is guaranteed.** There is exactly one rule method, `EligibilityService.Check`, a pure function with no DB access.
 Allocation calls it in `Fill`; replacement calls it in `RosterService.Validate` with the version's other duties of the new staff.
 Both paths therefore apply the same order: unavailable, overlapping duty, duty limit.
-Replacement only adds checks that do not exist in allocation (role must be Staff, not already in the slot).
+Replacement only adds checks that do not exist in allocation (role must be Faculty, not already in the slot).
 Unit tests cover `Check`; smoke scenario 7 proves a clashing replacement gets 422.
 
 **Mutable draft vs immutable published snapshot.** Only one draft can exist (unique index on the generated `DraftKey` column).

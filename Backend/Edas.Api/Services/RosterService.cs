@@ -24,9 +24,9 @@ public sealed class RosterService(AppDbContext db, IHubContext<NotificationHub> 
 
     private async Task Validate(int versionId, Assignment target, int newStaffId)
     {
-        var staff = await db.Staff.AsNoTracking().Where(s => s.Id == newStaffId && s.Role == Role.Staff)
+        var staff = await db.Staff.AsNoTracking().Where(s => s.Id == newStaffId && s.Role == Role.Faculty)
             .Select(s => new StaffInfo(s.Id, s.MaxDuties)).SingleOrDefaultAsync()
-            ?? throw new RuleException("The new staff member must be an existing user with role Staff.");
+            ?? throw new RuleException("The new staff member must be an existing user with role Faculty.");
         if (await db.Assignments.AnyAsync(a => a.RosterVersionId == versionId && a.SlotId == target.SlotId && a.StaffId == newStaffId))
             throw new RuleException("The staff member is already assigned to this slot.");
         var duties = await db.Assignments.AsNoTracking()

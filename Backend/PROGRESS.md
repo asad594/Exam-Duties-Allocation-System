@@ -18,7 +18,7 @@
 
 ## Notes
 - The schema defines 11 tables (the prompt's "10 tables" is a miscount); the gate checks all 11.
-- Phase 2 Staff-token (403) check inserts its staff user with SQL (reusing the coordinator hash), so the Phase 2 gate does not depend on Phase 3.
+- Phase 2 Staff-token (403) check inserts its staff user with SQL (reusing the admin hash), so the Phase 2 gate does not depend on Phase 3.
 - Generate reuses the single draft row (clears its assignments/vacancies) so audit rows pointing at the draft stay valid.
 - Publishing gives the draft the next VersionNo, so the newest published roster always has the highest number.
 

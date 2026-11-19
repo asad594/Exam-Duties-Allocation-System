@@ -27,13 +27,13 @@ public static class Seeder
     public static void Run(AppDbContext db, IPasswordHasher<Staff> hasher, bool large)
     {
         if (db.Staff.Any()) return;
-        db.Staff.Add(Person(hasher, "Exam Coordinator", "coord@edas.test", "Coord@123", Role.Coordinator, 0));
+        db.Staff.Add(Person(hasher, "System Admin", "admin@edas.test", "Admin@123", Role.Admin, 0));
         if (large) SeedLarge(db, hasher); else SeedScenarios(db, hasher);
     }
 
     private static void SeedScenarios(AppDbContext db, IPasswordHasher<Staff> hasher)
     {
-        var staff = People.Select(p => Person(hasher, p.Name, $"{p.Email}@edas.test", "Staff@123", Role.Staff, p.MaxDuties)).ToList();
+        var staff = People.Select(p => Person(hasher, p.Name, $"{p.Email}@edas.test", "Faculty@123", Role.Faculty, p.MaxDuties)).ToList();
         db.Staff.AddRange(staff);
         var rooms = Sessions.SelectMany(s => s.Slots).Select(s => s.Room).Distinct().ToDictionary(n => n, n => new Room { Name = n });
         foreach (var (course, day, start, end, slots) in Sessions)
@@ -51,7 +51,7 @@ public static class Seeder
 
     private static void SeedLarge(AppDbContext db, IPasswordHasher<Staff> hasher)
     {
-        var staff = Enumerable.Range(1, 60).Select(i => Person(hasher, $"Staff {i:00}", $"staff{i:00}@edas.test", "Staff@123", Role.Staff, 4)).ToList();
+        var staff = Enumerable.Range(1, 60).Select(i => Person(hasher, $"Faculty {i:00}", $"faculty{i:00}@edas.test", "Faculty@123", Role.Faculty, 4)).ToList();
         db.Staff.AddRange(staff);
         var rooms = Enumerable.Range(1, 4).Select(i => new Room { Name = $"Hall {i}" }).ToList();
         (int Start, int End)[] times = [(9, 12), (13, 15), (16, 18)];

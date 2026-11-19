@@ -49,7 +49,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         e.HasIndex(x => x.Email).IsUnique();
         e.ToTable(t =>
         {
-            t.HasCheckConstraint("CK_Staff_Role", "`Role` IN ('Coordinator','Staff')");
+            t.HasCheckConstraint("CK_Staff_Role", "`Role` IN ('Admin','Faculty')");
             t.HasCheckConstraint("CK_Staff_MaxDuties", "`MaxDuties` >= 0");
         });
     }

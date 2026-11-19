@@ -23,10 +23,10 @@ dotnet tool restore
 dotnet run --project Edas.Api --launch-profile http   # http://localhost:5080
 ```
 
-Sample logins: `coord@edas.test` / `Coord@123` (coordinator), `ali@edas.test` / `Staff@123` (staff).
+Sample logins: `admin@edas.test` / `Admin@123` (admin), `ali@edas.test` / `Faculty@123` (faculty).
 
 ## Test
-- Postman: import `Backend/postman/EDAS.postman_collection.json`, run **Auth → Login (coordinator)** first.
+- Postman: import `Backend/postman/EDAS.postman_collection.json`, run **Auth → Login (admin)** first.
 - Step-by-step manual tests: `Backend/MANUAL-TESTING.txt`.
 - Automatic: `bash Backend/scripts/smoke.sh` (API running) and `dotnet test` inside `Backend`.
 

@@ -32,10 +32,10 @@ check "DraftKey generated column exists" 'sql "SHOW CREATE TABLE RosterVersions"
 check "cascade only on owned rows (3 FKs)" '[ "$(sql "$CASCADES")" = 3 ]'
 
 echo "== Phase 2: auth"
-call POST /api/auth/login "" '{"email":"coord@edas.test","password":"Coord@123"}'
-check "coordinator login returns tokens" '[ "$CODE" = 200 ] && [ -n "$(json "d[\"accessToken\"]")" ]'
+call POST /api/auth/login "" '{"email":"admin@edas.test","password":"Admin@123"}'
+check "admin login returns tokens" '[ "$CODE" = 200 ] && [ -n "$(json "d[\"accessToken\"]")" ]'
 COORD=$(json 'd["accessToken"]'); REFRESH=$(json 'd["refreshToken"]')
-call POST /api/auth/login "" '{"email":"coord@edas.test","password":"wrong"}'
+call POST /api/auth/login "" '{"email":"admin@edas.test","password":"wrong"}'
 check "wrong password returns 401" '[ "$CODE" = 401 ]'
 call POST /api/auth/refresh "" "{\"refreshToken\":\"$REFRESH\"}"
 check "refresh issues a new pair" '[ "$CODE" = 200 ]'
@@ -47,14 +47,14 @@ check "logout returns 204" '[ "$CODE" = 204 ]'
 call POST /api/auth/refresh "" "{\"refreshToken\":\"$NEW_REFRESH\"}"
 check "logged-out refresh token returns 401" '[ "$CODE" = 401 ]'
 call GET /api/rooms
-check "coordinator endpoint without token returns 401" '[ "$CODE" = 401 ]'
-# Staff user inserted directly (reuses the coordinator's hash, so its password is Coord@123); independent of Phase 3.
-sql "INSERT INTO Staff (Name, Email, PasswordHash, Role, MaxDuties) SELECT 'Smoke Staff', 'smoke-$RUN@edas.test', PasswordHash, 'Staff', 0 FROM Staff WHERE Email = 'coord@edas.test'"
+check "admin endpoint without token returns 401" '[ "$CODE" = 401 ]'
+# Faculty user inserted directly (reuses the admin's hash, so its password is Admin@123); independent of Phase 3.
+sql "INSERT INTO Staff (Name, Email, PasswordHash, Role, MaxDuties) SELECT 'Smoke Staff', 'smoke-$RUN@edas.test', PasswordHash, 'Faculty', 0 FROM Staff WHERE Email = 'admin@edas.test'"
 SMOKE_STAFF=$(sql "SELECT Id FROM Staff WHERE Email = 'smoke-$RUN@edas.test'")
-call POST /api/auth/login "" "{\"email\":\"smoke-$RUN@edas.test\",\"password\":\"Coord@123\"}"
+call POST /api/auth/login "" "{\"email\":\"smoke-$RUN@edas.test\",\"password\":\"Admin@123\"}"
 STAFF_TOKEN=$(json 'd["accessToken"]')
 call GET /api/rooms "$STAFF_TOKEN"
-check "coordinator endpoint with Staff token returns 403" '[ "$CODE" = 403 ]'
+check "admin endpoint with Faculty token returns 403" '[ "$CODE" = 403 ]'
 
 echo "== Phase 3: CRUD"
 # crud NAME PATH CREATE_JSON UPDATE_JSON -> leaves the created id in $ID (deleted at the end)
@@ -70,8 +70,8 @@ crud session /api/sessions "{\"courseId\":$COURSE,\"date\":\"2030-01-10\",\"star
 crud slot /api/slots "{\"examSessionId\":$SESSION,\"roomId\":$ROOM,\"required\":1}" "{\"examSessionId\":$SESSION,\"roomId\":$ROOM,\"required\":2}"; SLOT=$ID
 crud unavailability /api/unavailabilities "{\"staffId\":$SMOKE_STAFF,\"date\":\"2030-01-10\",\"startTime\":\"00:00:00\",\"endTime\":\"23:59:59\"}" \
   "{\"staffId\":$SMOKE_STAFF,\"date\":\"2030-01-10\",\"startTime\":\"08:00:00\",\"endTime\":\"10:00:00\"}"; UNAVAILABLE=$ID
-crud staff /api/staff "{\"name\":\"Temp\",\"email\":\"temp-$RUN@edas.test\",\"password\":\"Temp@123\",\"role\":\"Staff\",\"maxDuties\":2}" \
-  "{\"name\":\"Temp 2\",\"email\":\"temp-$RUN@edas.test\",\"role\":\"Staff\",\"maxDuties\":3}"; TEMP_STAFF=$ID
+crud staff /api/staff "{\"name\":\"Temp\",\"email\":\"temp-$RUN@edas.test\",\"password\":\"Temp@123\",\"role\":\"Faculty\",\"maxDuties\":2}" \
+  "{\"name\":\"Temp 2\",\"email\":\"temp-$RUN@edas.test\",\"role\":\"Faculty\",\"maxDuties\":3}"; TEMP_STAFF=$ID
 call GET "/api/slots?sessionId=$SESSION" "$COORD"
 check "slots filter by sessionId" '[ "$(json "len(d)")" = 1 ]'
 call GET "/api/unavailabilities?staffId=$SMOKE_STAFF" "$COORD"
@@ -80,15 +80,15 @@ call POST /api/rooms "$COORD" '{"name":""}'
 check "empty room name returns 400" '[ "$CODE" = 400 ]'
 call POST /api/sessions "$COORD" "{\"courseId\":$COURSE,\"date\":\"2030-01-10\",\"startTime\":\"12:00:00\",\"endTime\":\"09:00:00\"}"
 check "end before start returns 400" '[ "$CODE" = 400 ]'
-call POST /api/staff "$COORD" '{"name":"X","email":"not-an-email","password":"Xx@12345","role":"Staff","maxDuties":1}'
+call POST /api/staff "$COORD" '{"name":"X","email":"not-an-email","password":"Xx@12345","role":"Faculty","maxDuties":1}'
 check "invalid email returns 400" '[ "$CODE" = 400 ]'
-call POST /api/staff "$COORD" '{"name":"X","email":"nopass@edas.test","role":"Staff","maxDuties":1}'
+call POST /api/staff "$COORD" '{"name":"X","email":"nopass@edas.test","role":"Faculty","maxDuties":1}'
 check "staff without password returns 400" '[ "$CODE" = 400 ]'
 call POST /api/rooms "$COORD" "{\"name\":\"Smoke Room B $RUN\"}"
 check "duplicate room name returns 409" '[ "$CODE" = 409 ]'
 call POST /api/courses "$COORD" "{\"code\":\"SM$RUN\",\"title\":\"Dup\"}"
 check "duplicate course code returns 409" '[ "$CODE" = 409 ]'
-call POST /api/staff "$COORD" "{\"name\":\"Dup\",\"email\":\"temp-$RUN@edas.test\",\"password\":\"Temp@123\",\"role\":\"Staff\",\"maxDuties\":1}"
+call POST /api/staff "$COORD" "{\"name\":\"Dup\",\"email\":\"temp-$RUN@edas.test\",\"password\":\"Temp@123\",\"role\":\"Faculty\",\"maxDuties\":1}"
 check "duplicate staff email returns 409" '[ "$CODE" = 409 ]'
 call DELETE "/api/courses/$COURSE" "$COORD"
 check "deleting an in-use course returns 409" '[ "$CODE" = 409 ]'
@@ -105,7 +105,7 @@ check "deleted row returns 404" '[ "$CODE" = 404 ]'
 echo "== Phase 5: allocation"
 # Without the dev seed data, create a tiny dataset: one fillable slot and one that cannot be filled.
 if [ "$(sql "SELECT COUNT(*) FROM Slots")" = 0 ]; then
-  for n in 1 2; do call POST /api/staff "$COORD" "{\"name\":\"Alloc $n\",\"email\":\"alloc$n-$RUN@edas.test\",\"password\":\"Alloc@123\",\"role\":\"Staff\",\"maxDuties\":2}"; done
+  for n in 1 2; do call POST /api/staff "$COORD" "{\"name\":\"Alloc $n\",\"email\":\"alloc$n-$RUN@edas.test\",\"password\":\"Alloc@123\",\"role\":\"Faculty\",\"maxDuties\":2}"; done
   call POST /api/courses "$COORD" "{\"code\":\"AL$RUN\",\"title\":\"Allocation\"}"; C=$(json 'd["id"]')
   call POST /api/rooms "$COORD" "{\"name\":\"Alloc Room $RUN\"}"; R=$(json 'd["id"]')
   call POST /api/sessions "$COORD" "{\"courseId\":$C,\"date\":\"2030-02-01\",\"startTime\":\"09:00:00\",\"endTime\":\"12:00:00\"}"; S1=$(json 'd["id"]')
@@ -127,7 +127,7 @@ snapshot() { sql "SELECT CONCAT((SELECT CONCAT_WS('|',VersionNo,Status,CreatedBy
   (SELECT IFNULL(GROUP_CONCAT(CONCAT_WS(':',Id,SlotId,Missing,UnavailableCount,BusyCount,AtLimitCount) ORDER BY Id),'') FROM Vacancies WHERE RosterVersionId=$1))"; }
 # Test staff are kept away from the seeded Main Hall day so repeated runs cannot fill the scenario-4 vacancy.
 new_staff() {
-  call POST /api/staff "$COORD" "{\"name\":\"$1\",\"email\":\"$1-$RUN@edas.test\",\"password\":\"Fresh@123\",\"role\":\"Staff\",\"maxDuties\":5}"
+  call POST /api/staff "$COORD" "{\"name\":\"$1\",\"email\":\"$1-$RUN@edas.test\",\"password\":\"Fresh@123\",\"role\":\"Faculty\",\"maxDuties\":5}"
   local id; id=$(json 'd["id"]')
   call POST /api/unavailabilities "$COORD" "{\"staffId\":$id,\"date\":\"2030-03-06\",\"startTime\":\"00:00:00\",\"endTime\":\"23:59:59\"}"
   echo "$id"
@@ -190,7 +190,7 @@ check "my-duties shows only own duties" '[ "$CODE" = 200 ] && [ "$(json "len(d)>
 IDS=$(json '",".join(str(r["assignmentId"]) for r in d)')
 check "my-duties never shows a draft" '[ "$(sql "SELECT COUNT(*) FROM Assignments WHERE Id IN ($IDS) AND RosterVersionId<>$NEXT")" = 0 ]'
 call GET /api/rosters "$FRESH2_TOKEN"
-check "Staff token gets 403 on /rosters" '[ "$CODE" = 403 ]'
+check "Faculty token gets 403 on /rosters" '[ "$CODE" = 403 ]'
 
 echo "== Phase 8: seeded scenarios"
 call POST /api/rosters/generate "$COORD"

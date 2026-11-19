@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Edas.Api.Controllers;
 
-[ApiController, Authorize(Roles = nameof(Role.Coordinator))]
+[ApiController, Authorize(Roles = nameof(Role.Admin))]
 public abstract class CrudController<TEntity, TDto, TInput>(CrudService<TEntity, TDto, TInput> service) : ControllerBase
     where TEntity : class, IEntity
 {

@@ -28,7 +28,7 @@ public sealed class RosterQueryService(AppDbContext db)
     {
         await EnsureExists(versionId);
         // One LEFT JOIN query; staff with no duties get an empty list.
-        var staff = await db.Staff.AsNoTracking().Where(s => s.Role == Role.Staff).OrderBy(s => s.Name)
+        var staff = await db.Staff.AsNoTracking().Where(s => s.Role == Role.Faculty).OrderBy(s => s.Name)
             .Select(s => new
             {
                 s.Id, s.Name,

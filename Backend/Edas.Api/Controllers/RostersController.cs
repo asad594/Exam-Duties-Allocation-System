@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Edas.Api.Controllers;
 
-[ApiController, Route("api/rosters"), Authorize(Roles = nameof(Role.Coordinator))]
+[ApiController, Route("api/rosters"), Authorize(Roles = nameof(Role.Admin))]
 public sealed class RostersController(AllocationService allocation, RosterService rosters, RosterQueryService queries) : ControllerBase
 {
     [HttpPost("generate")]
