@@ -1,23 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN, login } from './helpers'
+import { ADMIN, fill, login, remove, row } from './helpers'
 
 const run = Date.now()
-
-async function fill(page, values) {
-  for (const [label, value] of Object.entries(values)) {
-    const field = page.getByLabel(label, { exact: true })
-    if (await field.evaluate((el) => el.tagName) === 'SELECT') await field.selectOption(value)
-    else await field.fill(value)
-  }
-  await page.getByRole('button', { name: 'Save' }).click()
-}
-
-const row = (page, text) => page.getByRole('row').filter({ hasText: text })
-
-async function remove(page, text) {
-  page.once('dialog', (dialog) => dialog.accept())
-  await row(page, text).getByRole('button', { name: 'Delete' }).click()
-}
 
 test.beforeEach(async ({ page }) => login(page, ADMIN))
 

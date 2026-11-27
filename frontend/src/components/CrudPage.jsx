@@ -15,7 +15,7 @@ function toForm(fields, item) {
 }
 
 // One generic list/add/edit/delete screen, configured per resource (mirrors the back end's CrudController).
-export default function CrudPage({ title, singular, endpoint, columns, fields, query = {}, fixed = {}, heading = true }) {
+export default function CrudPage({ title, singular, endpoint, columns, fields, query = {}, fixed = {}, heading = true, actions }) {
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null)
@@ -57,13 +57,14 @@ export default function CrudPage({ title, singular, endpoint, columns, fields, q
       </div>
       {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
       <Table striped bordered hover responsive className="bg-white">
-        <thead><tr>{columns.map((c) => <th key={c.label}>{c.label}</th>)}<th style={{ width: 150 }}>Actions</th></tr></thead>
+        <thead><tr>{columns.map((c) => <th key={c.label}>{c.label}</th>)}<th style={{ width: actions ? 230 : 150 }}>Actions</th></tr></thead>
         <tbody>
           {items.length === 0 && <tr><td colSpan={columns.length + 1} className="text-muted text-center">No records yet.</td></tr>}
           {items.map((item) => (
             <tr key={item.id}>
               {columns.map((c) => <td key={c.label}>{c.render ? c.render(item, lookups) : item[c.key]}</td>)}
               <td>
+                {actions?.(item)}
                 <Button size="sm" variant="outline-primary" className="me-2" onClick={() => setEditing({ item })}>Edit</Button>
                 <Button size="sm" variant="outline-danger" onClick={() => remove(item)}>Delete</Button>
               </td>
