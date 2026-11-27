@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Alert, Badge, Button, Form, Tab, Tabs } from 'react-bootstrap'
 import { api } from '../../../api/client'
 import { errorMessage } from '../../../api/errors'
@@ -15,7 +16,9 @@ async function downloadCsv(versionId) {
 
 export default function RosterPage() {
   const { data: versions, error, reload } = useGet('/rosters')
-  const [selectedId, setSelectedId] = useState(null)
+  // ?version=&staffId= let other pages (e.g. leave approval) open a specific version filtered to one faculty member.
+  const [params] = useSearchParams()
+  const [selectedId, setSelectedId] = useState(Number(params.get('version')) || null)
   const [revision, setRevision] = useState(0)
   const [message, setMessage] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -82,7 +85,7 @@ export default function RosterPage() {
           <p>Showing <strong>version {current.versionNo}</strong> <Badge bg={current.status === 'Draft' ? 'secondary' : 'success'}>{current.status}</Badge>
             {!canReplace && <span className="text-muted ms-2">(older published version - read only)</span>}</p>
           <Tabs defaultActiveKey="roster" mountOnEnter unmountOnExit className="mb-3" key={`${current.id}-${revision}`}>
-            <Tab eventKey="roster" title="Roster"><RosterTable versionId={current.id} canReplace={canReplace} onChanged={replaced} /></Tab>
+            <Tab eventKey="roster" title="Roster"><RosterTable versionId={current.id} canReplace={canReplace} onChanged={replaced} initialStaffId={params.get('staffId') ?? ''} /></Tab>
             <Tab eventKey="workload" title="Workload"><Workload versionId={current.id} /></Tab>
             <Tab eventKey="vacancies" title="Vacancies"><Vacancies versionId={current.id} /></Tab>
             <Tab eventKey="audit" title="Audit trail"><Audit versionId={current.id} /></Tab>

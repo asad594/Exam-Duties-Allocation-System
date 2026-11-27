@@ -36,7 +36,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 builder.Services.AddAuthorization();
-builder.Services.AddSignalR();
+// SignalR has its own JSON settings; enums must be sent as names, as in the REST API.
+builder.Services.AddSignalR().AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddSingleton(jwt);
 builder.Services.AddSingleton<IPasswordHasher<Staff>, PasswordHasher<Staff>>();

@@ -80,7 +80,7 @@ test('full roster workflow with live notification', async ({ page, browser }) =>
     await page.getByLabel('New faculty member').selectOption({ label: 'Fatima Noor' })
     await page.getByRole('dialog').getByRole('button', { name: 'Replace' }).click()
     await expect(alert).toContainText(/version \d+ created/)
-    await expect(faculty.locator('.alert-info')).toContainText('changed your duties')
+    await expect(faculty.locator('.toast')).toContainText('changed your duties')
     await expect(faculty.locator('tbody tr')).toHaveCount(3)
   })
 

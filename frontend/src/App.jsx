@@ -3,13 +3,16 @@ import { AuthProvider } from './auth/AuthContext'
 import { homeFor, useAuth } from './auth/useAuth'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Layout from './components/Layout'
+import RealtimeProvider from './realtime/RealtimeProvider'
 import Login from './pages/Login'
 import Dashboard from './pages/admin/Dashboard'
 import { CoursesPage, FacultyPage, RoomsPage } from './pages/admin/ResourcePages'
 import SessionsPage from './pages/admin/SessionsPage'
 import UnavailabilityPage from './pages/admin/UnavailabilityPage'
 import RosterPage from './pages/admin/roster/RosterPage'
+import LeaveRequestsPage from './pages/admin/leave/LeaveRequestsPage'
 import MyDuties from './pages/faculty/MyDuties'
+import LeavePage from './pages/faculty/LeavePage'
 
 function Home() {
   const { user } = useAuth()
@@ -19,29 +22,33 @@ function Home() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route element={<ProtectedRoute role="Admin" />}>
-                <Route path="/admin" element={<Dashboard />} />
-                <Route path="/admin/faculty" element={<FacultyPage />} />
-                <Route path="/admin/rooms" element={<RoomsPage />} />
-                <Route path="/admin/courses" element={<CoursesPage />} />
-                <Route path="/admin/sessions" element={<SessionsPage />} />
-                <Route path="/admin/unavailability" element={<UnavailabilityPage />} />
-                <Route path="/admin/roster" element={<RosterPage />} />
-              </Route>
-              <Route element={<ProtectedRoute role="Faculty" />}>
-                <Route path="/my-duties" element={<MyDuties />} />
+      <RealtimeProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Home />} />
+                <Route element={<ProtectedRoute role="Admin" />}>
+                  <Route path="/admin" element={<Dashboard />} />
+                  <Route path="/admin/faculty" element={<FacultyPage />} />
+                  <Route path="/admin/rooms" element={<RoomsPage />} />
+                  <Route path="/admin/courses" element={<CoursesPage />} />
+                  <Route path="/admin/sessions" element={<SessionsPage />} />
+                  <Route path="/admin/unavailability" element={<UnavailabilityPage />} />
+                  <Route path="/admin/roster" element={<RosterPage />} />
+                  <Route path="/admin/leave" element={<LeaveRequestsPage />} />
+                </Route>
+                <Route element={<ProtectedRoute role="Faculty" />}>
+                  <Route path="/my-duties" element={<MyDuties />} />
+                  <Route path="/leave" element={<LeavePage />} />
+                </Route>
               </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </RealtimeProvider>
     </AuthProvider>
   )
 }

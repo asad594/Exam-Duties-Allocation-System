@@ -7,7 +7,7 @@ Assigns teachers and staff to exam invigilation duties for an existing exam sche
 | Folder | Contents |
 |---|---|
 | `Backend/` | ASP.NET Core 8 API (C#, MVC controllers returning JSON), EF Core + MySQL, JWT auth, SignalR, xUnit tests |
-| `frontend/` | React 18 + Vite + React-Bootstrap web app (admin and faculty screens), Playwright browser tests |
+| `frontend/` | React 18 + Vite + React-Bootstrap web app (admin and faculty screens, leave requests with live notifications), Playwright browser tests |
 
 ## Run the back end
 Requirements: .NET 8 SDK, Docker Desktop.

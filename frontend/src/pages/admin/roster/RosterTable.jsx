@@ -10,8 +10,8 @@ const filterSources = [
 ]
 
 // The roster view with optional faculty / date / room filters (sent to the API as query parameters).
-export default function RosterTable({ versionId, canReplace, onChanged }) {
-  const [filter, setFilter] = useState({ staffId: '', date: '', roomId: '' })
+export default function RosterTable({ versionId, canReplace, onChanged, initialStaffId }) {
+  const [filter, setFilter] = useState({ staffId: initialStaffId, date: '', roomId: '' })
   const [replacing, setReplacing] = useState(null)
   const { staffId: faculty = [], roomId: rooms = [] } = useLookups(filterSources)
   const query = new URLSearchParams(Object.entries(filter).filter(([, v]) => v)).toString()

@@ -252,6 +252,10 @@ check "approving twice returns 422" '[ "$CODE" = 422 ]'
 OTHER=$(sql "SELECT a.Id FROM Assignments a JOIN Slots sl ON sl.Id=a.SlotId JOIN ExamSessions e ON e.Id=sl.ExamSessionId WHERE a.RosterVersionId=$V AND e.Date='2030-03-07' AND a.StaffId<>$LEAVER_ID AND sl.Id NOT IN (SELECT SlotId FROM Assignments WHERE RosterVersionId=$V AND StaffId=$LEAVER_ID) LIMIT 1")
 call PUT "/api/rosters/$V/assignments/$OTHER" "$COORD" "{\"newStaffId\":$LEAVER_ID}"
 check "staff on approved leave cannot be given a duty that day (422)" '[ "$CODE" = 422 ] && json "d[\"reason\"]" | grep -q unavailable'
+# Remove the leave day again so later runs and the browser tests see the seeded data.
+LEAVE_DAY=$(sql "SELECT Id FROM Unavailabilities WHERE StaffId=$LEAVER_ID AND Date='2030-03-07' AND StartTime='00:00:00'")
+call DELETE "/api/unavailabilities/$LEAVE_DAY" "$COORD"
+check "cleanup: leave day removed" '[ "$CODE" = 204 ]'
 
 echo
 if [ "$FAILS" -eq 0 ]; then echo "ALL CHECKS PASSED"; else echo "$FAILS CHECK(S) FAILED"; exit 1; fi

@@ -190,12 +190,73 @@ STEP 11 - FACULTY CANNOT OPEN ADMIN PAGES
 
 
 --------------------------------------------------------------
-STEP 12 - AUTOMATIC BROWSER TESTS (optional)
+STEP 12 - LEAVE REQUESTS
+--------------------------------------------------------------
+[ ] 12.1 Log in as ali@edas.test. Menu shows "My Duties" and "Leave".
+         Click Leave.
+[ ] 12.2 Start date = a past date. EXPECT: "Start date cannot be in
+         the past." and the Send button is disabled.
+[ ] 12.3 Start 2031-01-10, End 2031-01-09.
+         EXPECT: "End date cannot be before the start date."
+[ ] 12.4 Start and End 2031-01-10, Reason "Wedding" -> Send request.
+         EXPECT: new row with an amber "Pending" badge and a Cancel
+         button.
+[ ] 12.5 Send the same dates again.
+         EXPECT: red message "You already have a pending or approved
+         leave request for these dates." (the API's 422 reason).
+[ ] 12.6 Click Cancel on the row -> OK. EXPECT: the row disappears.
+[ ] 12.7 Request 2031-01-10 again (Reason "Wedding").
+[ ] 12.8 Admin window: the menu shows "Leave requests" with an amber
+         number badge (pending count). A toast "Ali Raza requested
+         leave for 2031-01-10." appears without reloading.
+[ ] 12.9 Admin: Leave requests -> Pending tab shows Ali's card ->
+         Reject -> note "Exam week" -> Reject.
+         EXPECT: "Leave rejected for Ali Raza.", the card moves to the
+         Rejected tab, the badge count goes down.
+[ ] 12.10 Ali's window (no reload): toast "Your leave for 2031-01-10
+         was rejected. Note: Exam week" and a red "Rejected" badge
+         with the note in the list.
+
+
+--------------------------------------------------------------
+STEP 13 - DEMO SCRIPT (leave that affects published duties)
+--------------------------------------------------------------
+Before: as admin, Roster -> Generate draft -> Publish.
+Use two windows: ADMIN (normal) and FACULTY (InPrivate, Ctrl+Shift+N).
+
+[ ] 13.1 FACULTY: log in as fatima@edas.test. Open My Duties and note
+         a duty date (e.g. 2030-03-07, EN102). Open Leave and request
+         2030-03-07 to 2030-03-07, reason "Medical".
+         EXPECT: Pending row.
+[ ] 13.2 ADMIN (any page): toast "Fatima Noor requested leave for
+         2030-03-07." and the Leave requests badge increases.
+[ ] 13.3 ADMIN: Leave requests -> Fatima's card -> Approve.
+         EXPECT: dialog "Duties affected by this leave" listing the
+         EN102 duty (published version, and the draft if one exists).
+[ ] 13.4 FACULTY: toast "Your leave for 2030-03-07 was approved." and
+         the row turns green "Approved".
+[ ] 13.5 ADMIN: click "Go to roster".
+         EXPECT: Roster opens on the published version with the
+         Faculty member filter already set to Fatima Noor.
+[ ] 13.6 ADMIN: on the 2030-03-07 row click Replace, choose another
+         faculty member -> Replace. (If one is refused, the dialog shows
+         the rule's reason; choose another.) EXPECT: "Published roster
+         changed: version N created and affected faculty notified."
+[ ] 13.7 FACULTY: toast "Published roster vN changed your duties."
+         and My Duties no longer lists 2030-03-07.
+[ ] 13.8 ADMIN: try to give a 2030-03-07 duty back to Fatima.
+         EXPECT: "The staff member is unavailable at this time."
+
+
+--------------------------------------------------------------
+STEP 14 - AUTOMATIC BROWSER TESTS (optional)
 --------------------------------------------------------------
 With both the API and "npm run dev" running, in a THIRD terminal
 inside the frontend folder:
        npx playwright test
-EXPECT: 16 passed  (runs all the steps above in Microsoft Edge)
+EXPECT: 20 passed  (runs the steps above in Microsoft Edge)
+Run them on a FRESH database (Step 1.3) or before the back-end smoke
+test: the smoke test adds extra test users that change the roster counts.
 
 
 --------------------------------------------------------------

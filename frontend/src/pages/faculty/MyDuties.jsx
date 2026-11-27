@@ -1,24 +1,15 @@
-import { useCallback, useState } from 'react'
 import { Alert, Table } from 'react-bootstrap'
 import useGet from '../../api/useGet'
-import useDutiesRevised from '../../realtime/useDutiesRevised'
+import { useHubEvent } from '../../realtime/useRealtime'
 
-// A faculty member's duties from the latest published roster; refreshes live when an admin changes them.
+// A faculty member's duties from the latest published roster; reloads live when an admin changes them (the toast comes from LiveNotifications).
 export default function MyDuties() {
   const { data: duties, error, reload } = useGet('/my-duties')
-  const [notice, setNotice] = useState('')
-
-  const onRevised = useCallback((event) => {
-    setNotice(event.message)
-    reload()
-  }, [reload])
-
-  useDutiesRevised(onRevised)
+  useHubEvent('DutiesRevised', reload)
 
   return (
     <>
       <h1 className="h3 mb-4">My Duties</h1>
-      {notice && <Alert variant="info" dismissible onClose={() => setNotice('')}>{notice}</Alert>}
       {error && <Alert variant="danger">{error}</Alert>}
       {duties?.length === 0 && <Alert variant="secondary">You have no published duties yet.</Alert>}
       {duties?.length > 0 && (
