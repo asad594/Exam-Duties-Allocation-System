@@ -1,0 +1,213 @@
+==============================================================
+   EDAS - FRONT END (WEBSITE) TESTING GUIDE
+   Test every screen in the browser, step by step
+==============================================================
+
+Put an X in [ ] when what you see matches "EXPECT".
+Counts below are for a FRESH database (see Step 1.3).
+
+
+--------------------------------------------------------------
+STEP 1 - START EVERYTHING
+--------------------------------------------------------------
+1.1  Open Docker Desktop and wait for "Engine running".
+
+1.2  Terminal 1 - back end. Open a terminal in:
+       C:\Users\RB Tech\Desktop\Software Construntion project\Backend
+     and run:
+       docker start edas-mysql
+
+1.3  (Recommended) Fresh data:
+       dotnet tool run dotnet-ef database drop -f --project Edas.Api
+
+1.4  Start the API (leave this window open):
+       dotnet run --project Edas.Api --launch-profile http
+     EXPECT: "Now listening on: http://localhost:5080"
+
+1.5  Terminal 2 - front end. Open a terminal in:
+       C:\Users\RB Tech\Desktop\Software Construntion project\frontend
+     First time only:   npm install
+     Then (leave open): npm run dev
+     EXPECT: "Local: http://localhost:5173/"
+
+1.6  Open the browser at:  http://localhost:5173
+
+Logins
+   Admin   : admin@edas.test / Admin@123
+   Faculty : ali, sara, bilal, hina, usman, zainab, omar, fatima,
+             hamza, ayesha  (@edas.test) / Faculty@123
+
+
+--------------------------------------------------------------
+STEP 2 - LOGIN AND SECURITY
+--------------------------------------------------------------
+[ ] 2.1  Open http://localhost:5173/admin without logging in.
+         EXPECT: you are sent to the Login page.
+[ ] 2.2  Email admin@edas.test, password "wrong", Sign in.
+         EXPECT: red message "Invalid email or password."
+[ ] 2.3  Password Admin@123, Sign in.
+         EXPECT: Dashboard. Top bar shows "Signed in as Admin" and
+         the menu Dashboard, Faculty, Rooms, Courses, Exam Sessions,
+         Unavailability, Roster.
+[ ] 2.4  Press F5 (reload).
+         EXPECT: you stay logged in (the refresh token is used).
+[ ] 2.5  Click Logout, then open http://localhost:5173/admin again.
+         EXPECT: Login page.
+
+
+--------------------------------------------------------------
+STEP 3 - DASHBOARD  (log in as admin)
+--------------------------------------------------------------
+[ ] 3.1  EXPECT cards: 10 Faculty, 4 Rooms, 8 Courses,
+         8 Exam sessions, 11 Exam slots.
+[ ] 3.2  EXPECT: "Roster: not generated yet ..." (fresh database).
+
+
+--------------------------------------------------------------
+STEP 4 - FACULTY
+--------------------------------------------------------------
+[ ] 4.1  Click Faculty. EXPECT: 11 users (1 Admin + 10 Faculty).
+         There is NO password column.
+[ ] 4.2  Add User: Full name "New Teacher", Email new@edas.test,
+         Password Faculty@123, Role Faculty, Maximum duties 3 -> Save.
+         EXPECT: new row appears.
+[ ] 4.3  Edit that row: Maximum duties 5, leave Password empty -> Save.
+         EXPECT: the row shows 5 (password kept).
+[ ] 4.4  Add User again with the SAME email -> Save.
+         EXPECT: red message in the form "The change conflicts with
+         existing data (duplicate value or record in use)."  Cancel.
+[ ] 4.5  Delete "New Teacher" -> OK.  EXPECT: row disappears.
+
+
+--------------------------------------------------------------
+STEP 5 - ROOMS AND COURSES
+--------------------------------------------------------------
+[ ] 5.1  Rooms -> Add Room "Room 9" -> Save. EXPECT: new row.
+[ ] 5.2  Edit it to "Room 9B" -> Save. EXPECT: name changes.
+[ ] 5.3  Delete "Room 9B". EXPECT: row disappears.
+[ ] 5.4  Delete "Room 1".
+         EXPECT: red message "...record in use" (it has exams).
+[ ] 5.5  Courses -> Add Course: code CS999, title "Sample" -> Save,
+         Edit title to "Sample 2", then Delete.
+         EXPECT: each change shows in the table.
+
+
+--------------------------------------------------------------
+STEP 6 - EXAM SESSIONS AND ROOMS (SLOTS)
+--------------------------------------------------------------
+[ ] 6.1  Exam Sessions. EXPECT: 8 exams (course, date, time).
+[ ] 6.2  Click "Rooms" on the CS101 exam (2030-03-04, 09:00 - 12:00).
+         EXPECT: panel below with Room 1 (2) and Room 2 (2).
+[ ] 6.3  Add Session: Course CS101, Date 2030-04-01,
+         Start 12:00, End 09:00 -> Save.
+         EXPECT: "EndTime must be after StartTime."
+[ ] 6.4  Change Start 09:00, End 12:00 -> Save. EXPECT: new exam row.
+[ ] 6.5  Click its "Rooms" -> Add Room slot: Room 3, invigilators 2.
+         EXPECT: Room 3 appears in the panel.
+[ ] 6.6  Add Room slot again with Room 3.
+         EXPECT: "...conflicts with existing data..." Cancel.
+[ ] 6.7  Delete the Room 3 slot, then delete the 2030-04-01 exam.
+
+
+--------------------------------------------------------------
+STEP 7 - UNAVAILABILITY
+--------------------------------------------------------------
+[ ] 7.1  Unavailability -> "Show unavailability for" = Usman Tariq.
+         EXPECT: one row, 2030-03-05, 00:00 to 23:59.
+[ ] 7.2  Choose "All faculty". EXPECT: 2 rows (Usman, Zainab).
+[ ] 7.3  Add Unavailability: Ali Raza, 2030-04-01, 00:00 - 23:59.
+         Edit it to 09:00 - 12:00. Delete it.
+         EXPECT: each change shows in the table.
+
+
+--------------------------------------------------------------
+STEP 8 - ROSTER (AUTOMATIC ALLOCATION)
+--------------------------------------------------------------
+[ ] 8.1  Roster -> "Generate draft".
+         EXPECT: green message "Draft generated: 27 duties assigned,
+         1 vacancy (... ms)." Version shows "Draft".
+[ ] 8.2  Roster tab: 27 rows (date, time, course, room, faculty).
+         Check the business rules in the table:
+         - CS101 (09-12) and CS102 (11-13) on 2030-03-04 have
+           DIFFERENT people (no overlapping duties).
+         - Usman Tariq has no duty on 2030-03-05 (unavailable).
+         - Hina Malik appears only once (her maximum is 1).
+[ ] 8.3  Filters: Faculty member = Ali Raza -> 3 rows.
+         Back to All faculty. Date = 2030-03-04 -> 8 rows.
+         Clear date. Room = Main Hall -> 8 rows.
+[ ] 8.4  Workload tab: every faculty member with duties and hours
+         (Hina Malik 1 duty, 3 hours).
+[ ] 8.5  Vacancies tab: one row PH101 Main Hall, Missing 4,
+         Unavailable 1, Busy 0, At duty limit 1.
+[ ] 8.6  Export CSV: a file roster-v1.csv is downloaded
+         (opens in Excel).
+
+
+--------------------------------------------------------------
+STEP 9 - REPLACE A TEACHER (same rules as automatic allocation)
+--------------------------------------------------------------
+[ ] 9.1  Roster tab: row CS102 / Ali Raza -> Replace ->
+         New faculty member = Fatima Noor -> Replace.
+         EXPECT: red message "The staff member already has an
+         overlapping duty." (Fatima is on CS101 09-12). Cancel.
+[ ] 9.2  Row EN102 / Fatima Noor -> Replace -> Hamza Iqbal -> Replace.
+         EXPECT: "Invigilator replaced in the draft." and EN102 now
+         shows Hamza Iqbal.
+[ ] 9.3  Audit trail tab. EXPECT: one "Replace" row,
+         Fatima Noor -> Hamza Iqbal, by System Admin.
+
+
+--------------------------------------------------------------
+STEP 10 - PUBLISH AND VERSIONS
+--------------------------------------------------------------
+[ ] 10.1 Click Publish -> OK.
+         EXPECT: yellow message "Published as version 1. Warning:
+         1 slot(s) still have vacancies." The Publish button
+         disappears and the badge shows "Published".
+[ ] 10.2 Open a SECOND browser window in private/InPrivate mode
+         (Ctrl+Shift+N), go to http://localhost:5173 and log in as
+         fatima@edas.test / Faculty@123.
+         EXPECT: My Duties with 2 rows (CS101 Room 2, PH101 Main Hall).
+         Menu shows only "My Duties". Keep this window open.
+[ ] 10.3 In the ADMIN window: Roster tab, row EN102 / Hamza Iqbal ->
+         Replace -> Fatima Noor -> Replace.
+         EXPECT: "Published roster changed: version 2 created and
+         affected faculty notified." Version list shows version 2.
+[ ] 10.4 In FATIMA's window, without reloading:
+         EXPECT: blue message "Published roster v2 changed your
+         duties." and the table now has 3 rows (EN102 added).
+[ ] 10.5 Admin window: Version = "Version 1 - Published".
+         EXPECT: "(older published version - read only)" and no
+         Replace buttons. EN102 still shows Hamza Iqbal.
+
+
+--------------------------------------------------------------
+STEP 11 - FACULTY CANNOT OPEN ADMIN PAGES
+--------------------------------------------------------------
+[ ] 11.1 In Fatima's window type http://localhost:5173/admin
+         EXPECT: you are sent back to My Duties.
+[ ] 11.2 Click Logout. EXPECT: Login page.
+
+
+--------------------------------------------------------------
+STEP 12 - AUTOMATIC BROWSER TESTS (optional)
+--------------------------------------------------------------
+With both the API and "npm run dev" running, in a THIRD terminal
+inside the frontend folder:
+       npx playwright test
+EXPECT: 16 passed  (runs all the steps above in Microsoft Edge)
+
+
+--------------------------------------------------------------
+PROBLEMS?
+--------------------------------------------------------------
+"Cannot reach the server. Is the API running on port 5080?"
+     -> Terminal 1 is closed or the API stopped. Do Step 1.4 again.
+Page does not open at localhost:5173
+     -> Terminal 2 is closed. Run "npm run dev" again.
+Counts are different from this guide
+     -> old test data. Do Step 1.3 (drop) then 1.4 again.
+
+FINISHED: press Ctrl+C in both terminals.
+Optional: docker stop edas-mysql
+==============================================================
