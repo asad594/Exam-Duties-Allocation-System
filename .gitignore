@@ -25,3 +25,7 @@ Thumbs.db
 
 # Local screenshots
 Screenshot*
+
+# Playwright output
+test-results/
+playwright-report/
