@@ -9,7 +9,9 @@ BODY=""
 
 check() { if eval "$2"; then echo "PASS $1"; else echo "FAIL $1 (code=$CODE body=${BODY:0:200})"; FAILS=$((FAILS + 1)); fi; }
 sql() { docker exec edas-mysql mysql -uroot -proot edas -N -e "$1" 2>/dev/null; }
-json() { python3 -c "import json,sys; d=json.loads(sys.argv[1]); print($1)" "$BODY"; }
+# Use python3 where it runs (Linux/macOS), otherwise python (Windows); a Windows "python3" stub exists but fails.
+PY=$(python3 -c "" >/dev/null 2>&1 && echo python3 || echo python)
+json() { "$PY" -c "import json,sys; d=json.loads(sys.argv[1]); print($1)" "$BODY"; }
 
 # call METHOD PATH [TOKEN] [JSON_BODY] -> sets CODE and BODY
 call() {
