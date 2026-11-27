@@ -1,25 +1,28 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Alert, Table } from 'react-bootstrap'
-import { api } from '../../api/client'
-import { errorMessage } from '../../api/errors'
+import useGet from '../../api/useGet'
+import useDutiesRevised from '../../realtime/useDutiesRevised'
 
+// A faculty member's duties from the latest published roster; refreshes live when an admin changes them.
 export default function MyDuties() {
-  const [duties, setDuties] = useState(null)
-  const [error, setError] = useState('')
+  const { data: duties, error, reload } = useGet('/my-duties')
+  const [notice, setNotice] = useState('')
 
-  const load = useCallback(() => {
-    api.get('/my-duties').then(({ data }) => setDuties(data)).catch((err) => setError(errorMessage(err)))
-  }, [])
+  const onRevised = useCallback((event) => {
+    setNotice(event.message)
+    reload()
+  }, [reload])
 
-  useEffect(load, [load])
+  useDutiesRevised(onRevised)
 
   return (
     <>
       <h1 className="h3 mb-4">My Duties</h1>
+      {notice && <Alert variant="info" dismissible onClose={() => setNotice('')}>{notice}</Alert>}
       {error && <Alert variant="danger">{error}</Alert>}
-      {duties?.length === 0 && <Alert variant="info">You have no published duties yet.</Alert>}
+      {duties?.length === 0 && <Alert variant="secondary">You have no published duties yet.</Alert>}
       {duties?.length > 0 && (
-        <Table striped bordered hover responsive>
+        <Table striped bordered hover responsive className="bg-white">
           <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th></tr></thead>
           <tbody>
             {duties.map((d) => (

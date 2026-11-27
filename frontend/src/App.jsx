@@ -8,6 +8,7 @@ import Dashboard from './pages/admin/Dashboard'
 import { CoursesPage, FacultyPage, RoomsPage } from './pages/admin/ResourcePages'
 import SessionsPage from './pages/admin/SessionsPage'
 import UnavailabilityPage from './pages/admin/UnavailabilityPage'
+import RosterPage from './pages/admin/roster/RosterPage'
 import MyDuties from './pages/faculty/MyDuties'
 
 function Home() {
@@ -31,6 +32,7 @@ export default function App() {
                 <Route path="/admin/courses" element={<CoursesPage />} />
                 <Route path="/admin/sessions" element={<SessionsPage />} />
                 <Route path="/admin/unavailability" element={<UnavailabilityPage />} />
+                <Route path="/admin/roster" element={<RosterPage />} />
               </Route>
               <Route element={<ProtectedRoute role="Faculty" />}>
                 <Route path="/my-duties" element={<MyDuties />} />
