@@ -40,12 +40,12 @@ export default function RosterTable({ versionId, canReplace, onChanged, initialS
       {error && <Alert variant="danger">{error}</Alert>}
       {rows && (
         <Table striped bordered hover responsive className="bg-white">
-          <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th><th>Faculty member</th>{canReplace && <th>Action</th>}</tr></thead>
+          <thead><tr><th>Date</th><th>Time</th><th>Course code</th><th>Course name</th><th>Room</th><th>Faculty member</th>{canReplace && <th>Action</th>}</tr></thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={6} className="text-center text-muted">No duties match these filters.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className="text-center text-muted">No duties match these filters.</td></tr>}
             {rows.map((r) => (
               <tr key={r.assignmentId}>
-                <td>{r.date}</td><td>{r.startTime.slice(0, 5)} - {r.endTime.slice(0, 5)}</td><td>{r.courseCode}</td><td>{r.room}</td><td>{r.staffName}</td>
+                <td>{r.date}</td><td>{r.startTime.slice(0, 5)} - {r.endTime.slice(0, 5)}</td><td>{r.courseCode}</td><td>{r.courseName}</td><td>{r.room}</td><td>{r.staffName}</td>
                 {canReplace && <td><Button size="sm" variant="outline-primary" onClick={() => setReplacing(r)}>Replace</Button></td>}
               </tr>
             ))}

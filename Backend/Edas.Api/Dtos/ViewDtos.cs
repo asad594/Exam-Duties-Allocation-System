@@ -7,7 +7,7 @@ public sealed record RosterFilter(int? StaffId, DateOnly? Date, int? RoomId);
 public sealed record RosterVersionDto(int Id, int VersionNo, RosterStatus Status, DateTime CreatedAt, DateTime? PublishedAt);
 
 public sealed record RosterRowDto(int AssignmentId, int StaffId, string StaffName, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime,
-    string CourseCode, string Room);
+    string CourseCode, string CourseName, string Room);
 
 public sealed record WorkloadDto(int StaffId, string StaffName, int Duties, double TotalHours);
 

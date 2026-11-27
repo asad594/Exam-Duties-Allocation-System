@@ -59,8 +59,8 @@ public sealed class RosterQueryService(AppDbContext db)
     public async Task<string> Csv(int versionId, RosterFilter filter)
     {
         var lines = (await View(versionId, filter)).Select(r => string.Join(',', r.Date.ToString("yyyy-MM-dd"),
-            r.StartTime.ToString("HH:mm"), r.EndTime.ToString("HH:mm"), Quote(r.CourseCode), Quote(r.Room), Quote(r.StaffName)));
-        return string.Join('\n', lines.Prepend("Date,Start,End,Course,Room,Staff"));
+            r.StartTime.ToString("HH:mm"), r.EndTime.ToString("HH:mm"), Quote(r.CourseCode), Quote(r.CourseName), Quote(r.Room), Quote(r.StaffName)));
+        return string.Join('\n', lines.Prepend("Date,Start,End,Course,Course name,Room,Staff"));
     }
 
     private static string Quote(string value) => $"\"{value.Replace("\"", "\"\"")}\"";
@@ -71,7 +71,7 @@ public sealed class RosterQueryService(AppDbContext db)
                 && (f.Date == null || a.Slot.ExamSession.Date == f.Date) && (f.RoomId == null || a.Slot.RoomId == f.RoomId))
             .OrderBy(a => a.Slot.ExamSession.Date).ThenBy(a => a.Slot.ExamSession.StartTime).ThenBy(a => a.Slot.Room.Name).ThenBy(a => a.Staff.Name)
             .Select(a => new RosterRowDto(a.Id, a.StaffId, a.Staff.Name, a.Slot.ExamSession.Date, a.Slot.ExamSession.StartTime,
-                a.Slot.ExamSession.EndTime, a.Slot.ExamSession.Course.Code, a.Slot.Room.Name))
+                a.Slot.ExamSession.EndTime, a.Slot.ExamSession.Course.Code, a.Slot.ExamSession.Course.Title, a.Slot.Room.Name))
             .ToListAsync();
 
     private async Task EnsureExists(int versionId)

@@ -181,7 +181,7 @@ check "vacancies match the database" '[ "$(json "len(d)")" = "$(sql "SELECT COUN
 call GET "/api/rosters/$NEXT/audit" "$COORD"
 check "audit shows the replacement with names" '[ "$(json "d[0][\"action\"]==\"Replace\" and d[0][\"newStaff\"]==\"fresh2\"")" = True ]'
 call GET "/api/rosters/$NEXT/export" "$COORD"
-check "export returns CSV with a header and one line per row" '[ "$(echo "$BODY" | head -1)" = "Date,Start,End,Course,Room,Staff" ] && [ "$(echo "$BODY" | wc -l)" = "$(sql "SELECT COUNT(*) + 1 FROM Assignments WHERE RosterVersionId=$NEXT")" ]'
+check "export returns CSV with a header and one line per row" '[ "$(echo "$BODY" | head -1)" = "Date,Start,End,Course,Course name,Room,Staff" ] && [ "$(echo "$BODY" | wc -l)" = "$(sql "SELECT COUNT(*) + 1 FROM Assignments WHERE RosterVersionId=$NEXT")" ]'
 call GET /api/rosters/999999/workload "$COORD"
 check "unknown roster returns 404" '[ "$CODE" = 404 ]'
 call POST /api/auth/login "" "{\"email\":\"fresh2-$RUN@edas.test\",\"password\":\"Fresh@123\"}"

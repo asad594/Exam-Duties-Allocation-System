@@ -484,7 +484,7 @@ SECTION 7 - AUTOMATIC DUTY ALLOCATION   (Postman folder: Rosters)
     REQUEST:   Export CSV    GET /api/rosters/1/export
     EXPECTED STATUS:  200 OK
     EXPECTED OUTPUT (first lines):
-       Date,Start,End,Course,Room,Staff
+       Date,Start,End,Course,Course name,Room,Staff
        2030-03-04,09:00,12:00,"CS101","Room 1","Usman Tariq"
        2030-03-04,09:00,12:00,"CS101","Room 1","Zainab Ali"
     TIP: "Save response" -> "Save to a file" to open it in Excel.
