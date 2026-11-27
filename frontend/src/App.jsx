@@ -5,6 +5,7 @@ import ProtectedRoute from './auth/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/admin/Dashboard'
+import { CoursesPage, FacultyPage, RoomsPage } from './pages/admin/ResourcePages'
 import MyDuties from './pages/faculty/MyDuties'
 
 function Home() {
@@ -23,6 +24,9 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route element={<ProtectedRoute role="Admin" />}>
                 <Route path="/admin" element={<Dashboard />} />
+                <Route path="/admin/faculty" element={<FacultyPage />} />
+                <Route path="/admin/rooms" element={<RoomsPage />} />
+                <Route path="/admin/courses" element={<CoursesPage />} />
               </Route>
               <Route element={<ProtectedRoute role="Faculty" />}>
                 <Route path="/my-duties" element={<MyDuties />} />
