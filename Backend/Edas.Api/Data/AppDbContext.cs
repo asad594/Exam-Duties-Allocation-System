@@ -17,6 +17,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Assignment> Assignments => Set<Assignment>();
     public DbSet<Vacancy> Vacancies => Set<Vacancy>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {
@@ -37,6 +38,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         b.Entity<Assignment>(ConfigureAssignment);
         b.Entity<Vacancy>(ConfigureVacancy);
         b.Entity<AuditLog>(ConfigureAuditLog);
+        b.Entity<LeaveRequest>(ConfigureLeaveRequest);
         RestrictDeletesExceptOwnedRows(b);
     }
 
@@ -108,6 +110,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         e.HasOne<RosterVersion>().WithMany().HasForeignKey(x => x.RosterVersionId);
         e.HasIndex(x => new { x.RosterVersionId, x.SlotId }).IsUnique();
         e.ToTable(t => t.HasCheckConstraint("CK_Vacancies_Missing", "`Missing` > 0"));
+    }
+
+    private static void ConfigureLeaveRequest(EntityTypeBuilder<LeaveRequest> e)
+    {
+        e.Property(x => x.Reason).HasMaxLength(500);
+        e.Property(x => x.DecisionNote).HasMaxLength(500);
+        e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        e.HasOne<Staff>().WithMany().HasForeignKey(x => x.DecidedById);
+        e.HasIndex(x => new { x.StaffId, x.StartDate });
+        e.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_LeaveRequests_Dates", "`EndDate` >= `StartDate`");
+            t.HasCheckConstraint("CK_LeaveRequests_Status", "`Status` IN ('Pending','Approved','Rejected')");
+            t.HasCheckConstraint("CK_LeaveRequests_Decided", "(`Status` = 'Pending') = (`DecidedAt` IS NULL)");
+        });
     }
 
     private static void ConfigureAuditLog(EntityTypeBuilder<AuditLog> e)

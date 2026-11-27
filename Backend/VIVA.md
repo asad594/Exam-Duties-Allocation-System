@@ -20,6 +20,7 @@
 | BR-04 vacancies visible | `AllocationService.Fill` -> Vacancies table -> `GET /rosters/{id}/vacancies` |
 | BR-05 balancing is an objective | `AllocationService.Fill` ranks only staff whose Check is None |
 | BR-06 same rules for replacement | `RosterService.Validate` calls `EligibilityService.Check` |
+| Extension: leave requests | `LeaveService.Create`, `Cancel`, `Approve` (adds unavailability, returns affected duties), `Reject`; `LeaveRequestsController` |
 
 **Allocation algorithm.** Load staff, slots and unavailabilities once. Sort slots by how many staff are eligible when nobody has a duty (fewest first), then date, start, id.
 For each slot, run `Check` for every Faculty user against the running duties; keep those with `Block.None`.
@@ -54,3 +55,4 @@ Clock skew is zero, so access tokens expire exactly on time; SignalR reads the J
 - Pomelo created the `DraftKey` generated column, so no service-level fallback was needed.
 - Dev MySQL runs in container `edas-mysql` on port 3307; `Jwt:Key` in appsettings is a development placeholder.
 - Large dataset: 60 staff, 10 days x 3 sessions x 4 rooms = 120 slots needing 2 each.
+- Leave: "today" is the server's local date; approving adds a 00:00-23:59:59 unavailability per leave day (skipping days that already have one), so allocation and replacement respect it through the same `Check`.

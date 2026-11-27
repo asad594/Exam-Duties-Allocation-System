@@ -160,6 +160,61 @@ namespace Edas.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Edas.Api.Models.LeaveRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("DecidedById")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedById");
+
+                    b.HasIndex("StaffId", "StartDate");
+
+                    b.ToTable("LeaveRequests", t =>
+                        {
+                            t.HasCheckConstraint("CK_LeaveRequests_Dates", "`EndDate` >= `StartDate`");
+
+                            t.HasCheckConstraint("CK_LeaveRequests_Decided", "(`Status` = 'Pending') = (`DecidedAt` IS NULL)");
+
+                            t.HasCheckConstraint("CK_LeaveRequests_Status", "`Status` IN ('Pending','Approved','Rejected')");
+                        });
+                });
+
             modelBuilder.Entity("Edas.Api.Models.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -475,6 +530,22 @@ namespace Edas.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("Edas.Api.Models.LeaveRequest", b =>
+                {
+                    b.HasOne("Edas.Api.Models.Staff", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Edas.Api.Models.Staff", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("Edas.Api.Models.RefreshToken", b =>

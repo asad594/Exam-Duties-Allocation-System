@@ -27,8 +27,8 @@ echo "== Phase 1: schema"
 TABLES="SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='edas' AND TABLE_NAME<>'__EFMigrationsHistory'"
 constraints() { sql "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA='edas' AND CONSTRAINT_TYPE='$1'"; }
 CASCADES="SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='edas' AND DELETE_RULE='CASCADE'"
-check "all 11 schema tables exist" '[ "$(sql "$TABLES")" = 11 ]'
-check "10 CHECK constraints exist" '[ "$(constraints CHECK)" = 10 ]'
+check "all 12 schema tables exist" '[ "$(sql "$TABLES")" = 12 ]'
+check "13 CHECK constraints exist" '[ "$(constraints CHECK)" = 13 ]'
 check "10 UNIQUE constraints exist" '[ "$(constraints UNIQUE)" = 10 ]'
 check "DraftKey generated column exists" 'sql "SHOW CREATE TABLE RosterVersions" | grep -q "DraftKey.*GENERATED ALWAYS.*STORED"'
 check "cascade only on owned rows (3 FKs)" '[ "$(sql "$CASCADES")" = 3 ]'
@@ -212,6 +212,46 @@ CLASH=$(sql "SELECT a.Id FROM Assignments a JOIN Slots sl ON sl.Id=a.SlotId JOIN
 BUSY=$(slot_staff CS101 | head -1)
 call PUT "/api/rosters/$V/assignments/$CLASH" "$COORD" "{\"newStaffId\":$BUSY}"
 check "S7 a replacement that would clash is rejected with 422" '[ "$CODE" = 422 ] && json "d[\"reason\"]" | grep -q overlapping'
+
+echo "== Phase 9: leave requests"
+# A seeded faculty member with a duty on 2030-03-07 in draft $V and no leave yet on that day.
+LEAVER=$(sql "SELECT s.Email FROM Assignments a JOIN Staff s ON s.Id=a.StaffId JOIN Slots sl ON sl.Id=a.SlotId JOIN ExamSessions e ON e.Id=sl.ExamSessionId WHERE a.RosterVersionId=$V AND e.Date='2030-03-07' AND s.Email NOT LIKE '%-%' AND NOT EXISTS (SELECT 1 FROM LeaveRequests l WHERE l.StaffId=s.Id AND l.Status<>'Rejected' AND l.StartDate<='2030-03-07' AND l.EndDate>='2030-03-07') LIMIT 1")
+LEAVER_ID=$(sql "SELECT Id FROM Staff WHERE Email='$LEAVER'")
+call POST /api/auth/login "" "{\"email\":\"$LEAVER\",\"password\":\"Faculty@123\"}"; LT=$(json 'd["accessToken"]')
+leave() { call POST /api/leave-requests "$LT" "{\"startDate\":\"$1\",\"endDate\":\"$2\",\"reason\":\"${3:-}\"}"; }
+leave 2020-01-01 2020-01-02
+check "leave starting in the past returns 422" '[ "$CODE" = 422 ] && json "d[\"reason\"]" | grep -q past'
+leave 2030-03-08 2030-03-07
+check "leave ending before it starts returns 400" '[ "$CODE" = 400 ]'
+call POST /api/leave-requests "$COORD" '{"startDate":"2030-03-07","endDate":"2030-03-07"}'
+check "admin cannot request leave (403)" '[ "$CODE" = 403 ]'
+leave 2030-03-07 2030-03-07 "Family event"
+L=$(json 'd["id"]')
+check "faculty requests leave (201, Pending)" '[ "$CODE" = 201 ] && [ "$(json "d[\"status\"]")" = Pending ]'
+leave 2030-03-06 2030-03-07
+check "overlapping leave returns 422" '[ "$CODE" = 422 ]'
+call GET /api/leave-requests/mine "$LT"
+check "faculty see their own request" '[ "$(json "[r[\"status\"] for r in d if r[\"id\"]==$L]")" = "['"'"'Pending'"'"']" ]'
+call GET /api/leave-requests "$LT"
+check "faculty cannot list all requests (403)" '[ "$CODE" = 403 ]'
+call GET "/api/leave-requests?status=Pending" "$COORD"
+check "admin sees the pending request with the staff name" '[ "$(json "[r[\"staffId\"] for r in d if r[\"id\"]==$L]")" = "[$LEAVER_ID]" ] && [ "$(json "all(r[\"status\"]==\"Pending\" for r in d)")" = True ]'
+leave 2030-03-20 2030-03-20; L2=$(json 'd["id"]')
+call DELETE "/api/leave-requests/$L2" "$LT"
+check "faculty cancel a pending request (204)" '[ "$CODE" = 204 ] && [ "$(sql "SELECT COUNT(*) FROM LeaveRequests WHERE Id=$L2")" = 0 ]'
+leave 2030-03-21 2030-03-21; L3=$(json 'd["id"]')
+call POST "/api/leave-requests/$L3/reject" "$COORD" '{"note":"Exam week"}'
+check "admin rejects with a note" '[ "$CODE" = 200 ] && [ "$(json "d[\"status\"]+\"|\"+d[\"decisionNote\"]")" = "Rejected|Exam week" ]'
+call DELETE "/api/leave-requests/$L3" "$LT"
+check "a decided request cannot be cancelled (422)" '[ "$CODE" = 422 ]'
+call POST "/api/leave-requests/$L/approve" "$COORD"
+check "approve returns the request and the affected duties" '[ "$CODE" = 200 ] && [ "$(json "d[\"request\"][\"status\"]")" = Approved ] && [ "$(json "any(a[\"rosterVersionId\"]==$V and a[\"date\"]==\"2030-03-07\" for a in d[\"affectedDuties\"])")" = True ]'
+check "approval marks the leave day unavailable" '[ "$(sql "SELECT COUNT(*) FROM Unavailabilities WHERE StaffId=$LEAVER_ID AND Date=\"2030-03-07\" AND StartTime=\"00:00:00\"")" = 1 ]'
+call POST "/api/leave-requests/$L/approve" "$COORD"
+check "approving twice returns 422" '[ "$CODE" = 422 ]'
+OTHER=$(sql "SELECT a.Id FROM Assignments a JOIN Slots sl ON sl.Id=a.SlotId JOIN ExamSessions e ON e.Id=sl.ExamSessionId WHERE a.RosterVersionId=$V AND e.Date='2030-03-07' AND a.StaffId<>$LEAVER_ID AND sl.Id NOT IN (SELECT SlotId FROM Assignments WHERE RosterVersionId=$V AND StaffId=$LEAVER_ID) LIMIT 1")
+call PUT "/api/rosters/$V/assignments/$OTHER" "$COORD" "{\"newStaffId\":$LEAVER_ID}"
+check "staff on approved leave cannot be given a duty that day (422)" '[ "$CODE" = 422 ] && json "d[\"reason\"]" | grep -q unavailable'
 
 echo
 if [ "$FAILS" -eq 0 ]; then echo "ALL CHECKS PASSED"; else echo "$FAILS CHECK(S) FAILED"; exit 1; fi

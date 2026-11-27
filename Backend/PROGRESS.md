@@ -26,3 +26,7 @@
 - `dotnet build`: 0 errors, 0 warnings. `dotnet test`: 14/14 passed. `scripts/smoke.sh`: 87/87 checks passed.
 - Large dataset (`SEED_LARGE=1`, 60 staff, 120 slots, 240 duties): generate took 835 ms cold, 240-340 ms warm (target 5 s).
 - Only EF-generated migration files contain `///` comments; no TODOs or regions in hand-written code.
+
+## Extension: leave requests
+- Table `LeaveRequests` (migration `AddLeaveRequests`), endpoints under `/api/leave-requests`, SignalR `LeaveRequested` (admins group) and `LeaveDecided` (staff group).
+- Smoke Phase 9: 15 checks; full script 102/102 on a fresh database and on a repeat run. Postman folder "Leave Requests".

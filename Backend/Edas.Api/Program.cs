@@ -45,6 +45,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RosterService>();
 builder.Services.AddScoped<AllocationService>();
 builder.Services.AddScoped<RosterQueryService>();
+builder.Services.AddScoped<LeaveService>();
 builder.Services.AddScoped(typeof(CrudService<,,>));
 builder.Services.AddSingleton<ICrudMap<Staff, StaffDto, StaffInput>, StaffMap>();
 builder.Services.AddSingleton<ICrudMap<Course, CourseDto, CourseInput>, CourseMap>();
